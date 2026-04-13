@@ -16,6 +16,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Base64
 import android.util.Log
+import android.view.Display
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.CookieManager
@@ -46,7 +47,12 @@ import java.net.URL
 import java.util.zip.ZipFile
 
 
-class AndroidInterface(private val context: Context) {
+class AndroidInterface(private val context: Context, private val onBattleDataReceived: (String) -> Unit) {
+    @JavascriptInterface
+    fun receiveBattleData(payload: String) {
+        onBattleDataReceived(payload)
+    }
+
     @JavascriptInterface
     fun downloadFile(fileName: String, mimeType: String?, base64Data: String) {
         try {
@@ -104,6 +110,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var mFilePathCallback: ValueCallback<Array<Uri>>? = null
+    private var consolePresentation: ConsolePresentation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,11 +133,34 @@ class MainActivity : AppCompatActivity() {
 
         webView.setDownloadListener(CustomDownloadListener())
 
-        webView.addJavascriptInterface(AndroidInterface(this), "Android")
+        webView.addJavascriptInterface(AndroidInterface(this) { payload ->
+            runOnUiThread {
+                try {
+                    val jsonObject = JSONObject(payload)
+                    val movesArray = jsonObject.getJSONArray("moves")
+                    consolePresentation?.updateMoves(movesArray)
+                } catch (e: Exception) {
+                    Log.e("AndroidInterface", "Error parsing battle data payload", e)
+                }
+            }
+        }, "AndroidInterface")
+        webView.addJavascriptInterface(AndroidInterface(this) { }, "Android")
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+
+                // Inject overlay script when main frame finishes loading
+                if (url == "http://pokerogue.net/" || url == "https://pokerogue.net/" || url == "http://localhost:8000/index.html") {
+                    try {
+                        val inputStream = assets.open("overlay_inject.js")
+                        val script = inputStream.bufferedReader().use { it.readText() }
+                        view?.evaluateJavascript(script, null)
+                    } catch (e: Exception) {
+                        Log.e("WebView", "Error injecting overlay script", e)
+                    }
+                }
+
                 view?.evaluateJavascript(
                     """
             (function() {
@@ -221,6 +251,20 @@ class MainActivity : AppCompatActivity() {
 
         requestPermissions()
         checkGameFiles()
+        setupSecondaryDisplay()
+    }
+
+    private fun setupSecondaryDisplay() {
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+        val displays = displayManager.displays
+        val secondaryDisplay = displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+
+        if (secondaryDisplay != null) {
+            consolePresentation = ConsolePresentation(this, secondaryDisplay)
+            consolePresentation?.show()
+        } else {
+            Log.d("MainActivity", "No secondary display found. Proceeding in single-screen mode.")
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -776,5 +820,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         server?.stop()
+        consolePresentation?.dismiss()
     }
 }
