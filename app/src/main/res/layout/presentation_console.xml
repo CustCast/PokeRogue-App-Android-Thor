@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:columnCount="2"
+    android:rowCount="2">
+
+    <TextView
+        android:id="@+id/textTopLeft"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_rowWeight="1"
+        android:layout_columnWeight="1"
+        android:gravity="center"
+        android:text="-"
+        android:textColor="#33FF33"
+        android:textSize="32sp" />
+
+    <TextView
+        android:id="@+id/textTopRight"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_rowWeight="1"
+        android:layout_columnWeight="1"
+        android:gravity="center"
+        android:text="-"
+        android:textColor="#33FF33"
+        android:textSize="32sp" />
+
+    <TextView
+        android:id="@+id/textBottomLeft"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_rowWeight="1"
+        android:layout_columnWeight="1"
+        android:gravity="center"
+        android:text="-"
+        android:textColor="#33FF33"
+        android:textSize="32sp" />
+
+    <TextView
+        android:id="@+id/textBottomRight"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_rowWeight="1"
+        android:layout_columnWeight="1"
+        android:gravity="center"
+        android:text="-"
+        android:textColor="#33FF33"
+        android:textSize="32sp" />
+
+</GridLayout>
