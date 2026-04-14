@@ -62,8 +62,28 @@
                      stateStr = "FIGHT_MENU";
                      const field = window.globalScene.getPlayerField();
                      if (field && field.length > 0) {
-                         const active = field[0];
-                         const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
+                         let activePokemon = null;
+
+                         // 1. Check if the Fight menu knows who it is rendering for
+                         if (ui.handlers[UiMode.FIGHT] && ui.handlers[UiMode.FIGHT].pokemon) {
+                             activePokemon = ui.handlers[UiMode.FIGHT].pokemon;
+                         }
+                         // 2. Check if the Command menu knows
+                         else if (ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].pokemon) {
+                             activePokemon = ui.handlers[UiMode.COMMAND].pokemon;
+                         }
+                         // 3. Fallback: Check if the Command menu tracks the active battler index
+                         else if (ui.handlers[UiMode.COMMAND] && typeof ui.handlers[UiMode.COMMAND].activeBattlerIndex === 'number') {
+                             activePokemon = field[ui.handlers[UiMode.COMMAND].activeBattlerIndex];
+                         }
+                         // 4. Ultimate fallback (Single battles)
+                         else {
+                             activePokemon = field[0];
+                         }
+
+                         if (!activePokemon) activePokemon = field[0];
+
+                         const moveset = activePokemon.getMoveset ? activePokemon.getMoveset() : activePokemon.moveset;
                          if (moveset) {
                              payloadData.moves = [];
                              for (let i = 0; i < 4; i++) {
