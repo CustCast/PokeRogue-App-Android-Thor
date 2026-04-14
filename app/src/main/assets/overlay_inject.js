@@ -28,61 +28,79 @@
         return res;
     };
 
+    // Helper to force a true DOM-level keypress
+    function fireKey(keyStr, keyCodeNum) {
+        const downEvent = new KeyboardEvent('keydown', {
+            key: keyStr,
+            code: keyStr === ' ' ? 'Space' : keyStr,
+            keyCode: keyCodeNum,
+            which: keyCodeNum,
+            bubbles: true,
+            cancelable: true
+        });
+        window.dispatchEvent(downEvent);
+
+        setTimeout(() => {
+            const upEvent = new KeyboardEvent('keyup', {
+                key: keyStr,
+                code: keyStr === ' ' ? 'Space' : keyStr,
+                keyCode: keyCodeNum,
+                which: keyCodeNum,
+                bubbles: true,
+                cancelable: true
+            });
+            window.dispatchEvent(upEvent);
+        }, 50);
+    }
+
     window.ThorBridge = {
         execute: function(commandStr) {
             if (!window.globalScene || !window.globalScene.ui) return;
             const ui = window.globalScene.ui;
-            const currentMode = ui.getMode();
+
             try {
-                // Raw Input Passthrough
+                // GLOBAL RAW OVERRIDES (Bypassing Phaser's internal manager)
                 switch(commandStr) {
-                    case "INPUT_UP": ui.processInput(Button.UP); return;
-                    case "INPUT_DOWN": ui.processInput(Button.DOWN); return;
-                    case "INPUT_LEFT": ui.processInput(Button.LEFT); return;
-                    case "INPUT_RIGHT": ui.processInput(Button.RIGHT); return;
-                    case "INPUT_A": ui.processInput(Button.ACTION); return;
-                    case "INPUT_B": ui.processInput(Button.CANCEL); return;
-                    case "INPUT_START": ui.processInput(Button.MENU); return;
-                    case "INPUT_SELECT": ui.processInput(Button.CANCEL); return;
+                    case "INPUT_UP": fireKey('ArrowUp', 38); return;
+                    case "INPUT_DOWN": fireKey('ArrowDown', 40); return;
+                    case "INPUT_LEFT": fireKey('ArrowLeft', 37); return;
+                    case "INPUT_RIGHT": fireKey('ArrowRight', 39); return;
+                    case "INPUT_A": fireKey('z', 90); return;
+                    case "INPUT_B": fireKey('x', 88); return;
+                    case "INPUT_START": fireKey('Escape', 27); return;
+                    case "INPUT_SELECT": fireKey('Shift', 16); return;
+                    case "INPUT_TERA": fireKey('r', 82); return; // 'R' is the default Tera hotkey
                 }
 
-                if (commandStr === "ACTION_BACK") { ui.processInput(Button.CANCEL); return; }
+                if (commandStr === "ACTION_BACK") { fireKey('x', 88); return; }
 
                 // Hover Sync
                 if (commandStr.startsWith("HOVER_MAIN_")) {
-                    const hoverCmd = commandStr.replace("HOVER_MAIN_", "");
-                    switch(hoverCmd) {
-                        case "FIGHT": ui.setCursor(Command.FIGHT); break;
-                        case "BALL": ui.setCursor(Command.BALL); break;
-                        case "POKEMON": ui.setCursor(Command.POKEMON); break;
-                        case "RUN": ui.setCursor(Command.RUN); break;
-                    }
+                    const cmd = commandStr.replace("HOVER_MAIN_", "");
+                    if (cmd === "FIGHT") ui.setCursor(0);
+                    else if (cmd === "BALL") ui.setCursor(1);
+                    else if (cmd === "POKEMON") ui.setCursor(2);
+                    else if (cmd === "RUN") ui.setCursor(3);
                     return;
-                } else if (commandStr.startsWith("HOVER_MOVE_")) {
-                    const idx = parseInt(commandStr.replace("HOVER_MOVE_", ""), 10);
-                    if (!isNaN(idx)) ui.setCursor(idx);
-                    return;
-                } else if (commandStr.startsWith("HOVER_TARGET_")) {
-                    const idx = parseInt(commandStr.replace("HOVER_TARGET_", ""), 10);
+                }
+
+                if (commandStr.startsWith("HOVER_MOVE_") || commandStr.startsWith("HOVER_TARGET_")) {
+                    const idx = parseInt(commandStr.split('_').pop(), 10);
                     if (!isNaN(idx)) ui.setCursor(idx);
                     return;
                 }
 
-                // Actions
-                if (currentMode === UiMode.COMMAND) {
-                    switch (commandStr) {
-                        case "MAIN_FIGHT": ui.setCursor(Command.FIGHT); ui.processInput(Button.ACTION); break;
-                        case "MAIN_BALL": ui.setCursor(Command.BALL); ui.processInput(Button.ACTION); break;
-                        case "MAIN_POKEMON": ui.setCursor(Command.POKEMON); ui.processInput(Button.ACTION); break;
-                        case "MAIN_RUN": ui.setCursor(Command.RUN); ui.processInput(Button.ACTION); break;
-                    }
-                } else if (currentMode === UiMode.FIGHT && commandStr.startsWith("SELECT_MOVE_")) {
-                    const idx = parseInt(commandStr.replace("SELECT_MOVE_", ""), 10);
-                    if (!isNaN(idx)) { ui.setCursor(idx); ui.processInput(Button.ACTION); }
-                } else if (currentMode === UiMode.TARGET_SELECT && commandStr.startsWith("SELECT_TARGET_")) {
-                    const idx = parseInt(commandStr.replace("SELECT_TARGET_", ""), 10);
-                    if (!isNaN(idx)) { ui.setCursor(idx); ui.processInput(Button.ACTION); }
+                // Explicit Action Selection
+                if (commandStr.startsWith("SELECT_MOVE_") || commandStr.startsWith("SELECT_TARGET_")) {
+                     const idx = parseInt(commandStr.split('_').pop(), 10);
+                     if (!isNaN(idx)) { ui.setCursor(idx); fireKey('z', 90); }
+                     return;
                 }
+
+                if (commandStr === "MAIN_FIGHT") { ui.setCursor(0); fireKey('z', 90); }
+                if (commandStr === "MAIN_BALL") { ui.setCursor(1); fireKey('z', 90); }
+                if (commandStr === "MAIN_POKEMON") { ui.setCursor(2); fireKey('z', 90); }
+                if (commandStr === "MAIN_RUN") { ui.setCursor(3); fireKey('z', 90); }
             } catch (e) {}
         }
     };
@@ -104,7 +122,7 @@
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
 
-            // Selective Hide: Preserve Tera Button
+            // RE-ENABLE TERA INTERACTIVITY
             try {
                 if (ui.getMessageHandler && typeof ui.getMessageHandler === 'function') {
                     const msgHandler = ui.getMessageHandler();
@@ -112,11 +130,15 @@
                 }
                 if (ui.handlers && ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].commandsContainer) {
                     const container = ui.handlers[UiMode.COMMAND].commandsContainer;
+                    container.setAlpha(1);
                     if (container.list) {
-                        for (let i = 0; i < container.list.length; i++) {
-                            const child = container.list[i];
-                            if (child && child.name !== "terastallize-button") child.setAlpha(0);
-                        }
+                        container.list.forEach(child => {
+                            if (child.name === "terastallize-button") {
+                                child.setAlpha(1);
+                                child.setVisible(true);
+                                child.setInteractive();
+                            } else { child.setAlpha(0); }
+                        });
                     }
                 }
             } catch (e) {}

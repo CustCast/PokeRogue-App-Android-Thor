@@ -106,6 +106,10 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 onCommand("INPUT_SELECT")
                 return true
             }
+            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_R1) {
+                onCommand("INPUT_TERA")
+                return true
+            }
 
             // BUSY state passthroughs
             if (currentState == "BUSY") {

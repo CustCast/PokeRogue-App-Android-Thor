@@ -649,7 +649,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
                 KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
-                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ESCAPE -> true
+                KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ESCAPE -> true
                 else -> false
             }
 
