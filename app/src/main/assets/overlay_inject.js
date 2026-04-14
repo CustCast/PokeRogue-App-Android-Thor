@@ -34,7 +34,7 @@
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
             try {
-                // 1. Raw Controller Passthrough
+                // Raw Input Passthrough
                 switch(commandStr) {
                     case "INPUT_UP": ui.processInput(Button.UP); return;
                     case "INPUT_DOWN": ui.processInput(Button.DOWN); return;
@@ -42,11 +42,13 @@
                     case "INPUT_RIGHT": ui.processInput(Button.RIGHT); return;
                     case "INPUT_A": ui.processInput(Button.ACTION); return;
                     case "INPUT_B": ui.processInput(Button.CANCEL); return;
+                    case "INPUT_START": ui.processInput(Button.MENU); return;
+                    case "INPUT_SELECT": ui.processInput(Button.CANCEL); return;
                 }
 
                 if (commandStr === "ACTION_BACK") { ui.processInput(Button.CANCEL); return; }
 
-                // 2. Cursor Hover Sync (Updates top screen without clicking)
+                // Hover Sync
                 if (commandStr.startsWith("HOVER_MAIN_")) {
                     const hoverCmd = commandStr.replace("HOVER_MAIN_", "");
                     switch(hoverCmd) {
@@ -66,7 +68,7 @@
                     return;
                 }
 
-                // 3. Action Executions
+                // Actions
                 if (currentMode === UiMode.COMMAND) {
                     switch (commandStr) {
                         case "MAIN_FIGHT": ui.setCursor(Command.FIGHT); ui.processInput(Button.ACTION); break;
@@ -102,14 +104,20 @@
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
 
-            // Hide original command menu
+            // Selective Hide: Preserve Tera Button
             try {
                 if (ui.getMessageHandler && typeof ui.getMessageHandler === 'function') {
                     const msgHandler = ui.getMessageHandler();
                     if (msgHandler && msgHandler.commandWindow) msgHandler.commandWindow.setAlpha(0);
                 }
                 if (ui.handlers && ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].commandsContainer) {
-                    ui.handlers[UiMode.COMMAND].commandsContainer.setAlpha(0);
+                    const container = ui.handlers[UiMode.COMMAND].commandsContainer;
+                    if (container.list) {
+                        for (let i = 0; i < container.list.length; i++) {
+                            const child = container.list[i];
+                            if (child && child.name !== "terastallize-button") child.setAlpha(0);
+                        }
+                    }
                 }
             } catch (e) {}
 

@@ -641,6 +641,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (startScreenLayout.visibility == View.GONE && consolePresentation != null) {
+            // Gamepad Firewall
+            val isControllerInput = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
+                KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ESCAPE -> true
+                else -> false
+            }
+
+            if (isControllerInput) {
+                consolePresentation?.dispatchKeyEvent(event)
+                return true // Unconditionally consume to prevent WebView focus steal
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (startScreenLayout.visibility == View.VISIBLE)
         {

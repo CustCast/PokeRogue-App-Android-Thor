@@ -96,14 +96,27 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && currentState == "BUSY") {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP"); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN"); return true }
-                KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT"); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT"); return true }
-                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A"); return true }
-                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> { onCommand("INPUT_B"); return true }
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            // Global overrides
+            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
+                onCommand("INPUT_START")
+                return true
+            }
+            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT) {
+                onCommand("INPUT_SELECT")
+                return true
+            }
+
+            // BUSY state passthroughs
+            if (currentState == "BUSY") {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP"); return true }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN"); return true }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT"); return true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT"); return true }
+                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A"); return true }
+                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> { onCommand("INPUT_B"); return true }
+                }
             }
         }
 
