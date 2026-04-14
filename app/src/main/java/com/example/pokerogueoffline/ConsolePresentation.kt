@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.ViewFlipper
 import org.json.JSONObject
 
@@ -30,6 +31,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     private lateinit var btnMove3: Button
     private lateinit var btnFightBack: Button
 
+    private lateinit var tvTargetHeader: TextView
     private lateinit var targetButtonsContainer: LinearLayout
     private lateinit var btnTargetBack: Button
 
@@ -58,6 +60,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         btnMove3 = findViewById(R.id.btnMove3)
         btnFightBack = findViewById(R.id.btnFightBack)
 
+        tvTargetHeader = findViewById(R.id.tvTargetHeader)
         targetButtonsContainer = findViewById(R.id.targetButtonsContainer)
         btnTargetBack = findViewById(R.id.btnTargetBack)
 
@@ -129,18 +132,21 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
 
     private fun updateTargetSelect(data: JSONObject?) {
         val targets = data?.optJSONArray("targets")
+        val moveName = data?.optString("moveName", "Unknown")
+        val targetType = data?.optString("targetType", "")
+
+        tvTargetHeader.text = "Targeting: $moveName"
         targetButtonsContainer.removeAllViews()
 
-        if (targets != null) {
-            for (i in 0 until targets.length()) {
-                val targetObj = targets.getJSONObject(i)
-                val btn = Button(context)
-                val isPlayer = targetObj.optBoolean("isPlayer", false)
-                val isAlly = targetObj.optBoolean("isAlly", false)
-                val speciesName = targetObj.optString("name", "Target $i") // Adjust based on actual payload structure
+        if (targets != null && targets.length() > 0) {
+            val firstTarget = targets.getInt(0)
 
-                val prefix = if (isPlayer) "Ally" else "Enemy"
-                btn.text = "$prefix: $speciesName"
+            val isFoeAoe = targetType == "ALL_NEAR_ENEMIES" || targetType == "ALL_ENEMIES" || targetType == "ENEMY_SIDE"
+            val isFriendlyFireAoe = targetType == "ALL_NEAR_OTHERS" || targetType == "ALL" || targetType == "BOTH_SIDES"
+
+            if (isFoeAoe || isFriendlyFireAoe) {
+                val btn = Button(context)
+                btn.text = if (isFoeAoe) "HIT ALL FOES" else "[! FRIENDLY FIRE !] HIT EVERYONE"
 
                 // Style button retro terminal
                 btn.setBackgroundResource(R.drawable.retro_button_border)
@@ -153,10 +159,30 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 layoutParams.setMargins(16, 16, 16, 16)
                 btn.layoutParams = layoutParams
 
-                // Send target command dynamically
-                btn.setOnClickListener { onCommand("SELECT_TARGET_$i") }
-
+                btn.setOnClickListener { onCommand("SELECT_TARGET_$firstTarget") }
                 targetButtonsContainer.addView(btn)
+            } else {
+                for (i in 0 until targets.length()) {
+                    val targetIndex = targets.getInt(i)
+                    val btn = Button(context)
+                    btn.text = "Target $targetIndex"
+
+                    // Style button retro terminal
+                    btn.setBackgroundResource(R.drawable.retro_button_border)
+                    btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+                    btn.textSize = 24f
+                    val layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    layoutParams.setMargins(16, 16, 16, 16)
+                    btn.layoutParams = layoutParams
+
+                    // Send target command dynamically
+                    btn.setOnClickListener { onCommand("SELECT_TARGET_$targetIndex") }
+
+                    targetButtonsContainer.addView(btn)
+                }
             }
         }
     }
