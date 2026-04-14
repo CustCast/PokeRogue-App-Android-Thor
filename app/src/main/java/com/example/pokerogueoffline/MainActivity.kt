@@ -47,10 +47,10 @@ import java.net.URL
 import java.util.zip.ZipFile
 
 
-class AndroidInterface(private val context: Context, private val onBattleDataReceived: (String) -> Unit) {
+class AndroidInterface(private val context: Context, private val onStateChangedCallback: (String) -> Unit) {
     @JavascriptInterface
-    fun receiveBattleData(payload: String) {
-        onBattleDataReceived(payload)
+    fun onStateChanged(payload: String) {
+        onStateChangedCallback(payload)
     }
 
     @JavascriptInterface
@@ -136,11 +136,9 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(AndroidInterface(this) { payload ->
             runOnUiThread {
                 try {
-                    val jsonObject = JSONObject(payload)
-                    val movesArray = jsonObject.getJSONArray("moves")
-                    consolePresentation?.updateMoves(movesArray)
+                    consolePresentation?.onStateChanged(payload)
                 } catch (e: Exception) {
-                    Log.e("AndroidInterface", "Error parsing battle data payload", e)
+                    Log.e("AndroidInterface", "Error handling state change payload", e)
                 }
             }
         }, "AndroidInterface")
@@ -260,7 +258,11 @@ class MainActivity : AppCompatActivity() {
         val secondaryDisplay = displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
         if (secondaryDisplay != null) {
-            consolePresentation = ConsolePresentation(this, secondaryDisplay)
+            consolePresentation = ConsolePresentation(this, secondaryDisplay) { commandStr ->
+                runOnUiThread {
+                    webView.evaluateJavascript("window.ThorBridge.execute('$commandStr');", null)
+                }
+            }
             consolePresentation?.show()
         } else {
             Log.d("MainActivity", "No secondary display found. Proceeding in single-screen mode.")
