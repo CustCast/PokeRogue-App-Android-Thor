@@ -34,7 +34,39 @@
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
             try {
+                // 1. Raw Controller Passthrough
+                switch(commandStr) {
+                    case "INPUT_UP": ui.processInput(Button.UP); return;
+                    case "INPUT_DOWN": ui.processInput(Button.DOWN); return;
+                    case "INPUT_LEFT": ui.processInput(Button.LEFT); return;
+                    case "INPUT_RIGHT": ui.processInput(Button.RIGHT); return;
+                    case "INPUT_A": ui.processInput(Button.ACTION); return;
+                    case "INPUT_B": ui.processInput(Button.CANCEL); return;
+                }
+
                 if (commandStr === "ACTION_BACK") { ui.processInput(Button.CANCEL); return; }
+
+                // 2. Cursor Hover Sync (Updates top screen without clicking)
+                if (commandStr.startsWith("HOVER_MAIN_")) {
+                    const hoverCmd = commandStr.replace("HOVER_MAIN_", "");
+                    switch(hoverCmd) {
+                        case "FIGHT": ui.setCursor(Command.FIGHT); break;
+                        case "BALL": ui.setCursor(Command.BALL); break;
+                        case "POKEMON": ui.setCursor(Command.POKEMON); break;
+                        case "RUN": ui.setCursor(Command.RUN); break;
+                    }
+                    return;
+                } else if (commandStr.startsWith("HOVER_MOVE_")) {
+                    const idx = parseInt(commandStr.replace("HOVER_MOVE_", ""), 10);
+                    if (!isNaN(idx)) ui.setCursor(idx);
+                    return;
+                } else if (commandStr.startsWith("HOVER_TARGET_")) {
+                    const idx = parseInt(commandStr.replace("HOVER_TARGET_", ""), 10);
+                    if (!isNaN(idx)) ui.setCursor(idx);
+                    return;
+                }
+
+                // 3. Action Executions
                 if (currentMode === UiMode.COMMAND) {
                     switch (commandStr) {
                         case "MAIN_FIGHT": ui.setCursor(Command.FIGHT); ui.processInput(Button.ACTION); break;
@@ -69,6 +101,17 @@
             let payloadData = {};
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
+
+            // Hide original command menu
+            try {
+                if (ui.getMessageHandler && typeof ui.getMessageHandler === 'function') {
+                    const msgHandler = ui.getMessageHandler();
+                    if (msgHandler && msgHandler.commandWindow) msgHandler.commandWindow.setAlpha(0);
+                }
+                if (ui.handlers && ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].commandsContainer) {
+                    ui.handlers[UiMode.COMMAND].commandsContainer.setAlpha(0);
+                }
+            } catch (e) {}
 
             if (!ui.overlayActive) {
                  if (currentMode === UiMode.COMMAND) {

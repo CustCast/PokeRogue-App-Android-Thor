@@ -35,6 +35,8 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     private lateinit var targetButtonsContainer: LinearLayout
     private lateinit var btnTargetBack: Button
 
+    private var currentState: String = "BUSY"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.presentation_console)
@@ -80,9 +82,31 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         btnFightBack.setOnClickListener { onCommand("ACTION_BACK") }
 
         btnTargetBack.setOnClickListener { onCommand("ACTION_BACK") }
+
+        // Setup Hover Focus Listeners
+        btnMainFight.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_FIGHT") }
+        btnMainBall.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_BALL") }
+        btnMainPokemon.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_POKEMON") }
+        btnMainRun.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_RUN") }
+
+        btnMove0.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_0") }
+        btnMove1.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_1") }
+        btnMove2.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_2") }
+        btnMove3.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_3") }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && currentState == "BUSY") {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP"); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN"); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT"); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT"); return true }
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A"); return true }
+                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> { onCommand("INPUT_B"); return true }
+            }
+        }
+
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 onCommand("ACTION_BACK")
@@ -95,6 +119,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     fun onStateChanged(payload: String) {
         val json = JSONObject(payload)
         val state = json.optString("state", "BUSY")
+        currentState = state
         val data = json.optJSONObject("data")
 
         when (state) {
@@ -160,6 +185,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 btn.layoutParams = layoutParams
 
                 btn.setOnClickListener { onCommand("SELECT_TARGET_$firstTarget") }
+                btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$firstTarget") }
                 targetButtonsContainer.addView(btn)
             } else {
                 for (i in 0 until targets.length()) {
@@ -180,6 +206,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
 
                     // Send target command dynamically
                     btn.setOnClickListener { onCommand("SELECT_TARGET_$targetIndex") }
+                    btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$targetIndex") }
 
                     targetButtonsContainer.addView(btn)
                 }
