@@ -51,11 +51,21 @@
                         const hasTeraOrb = window.globalScene.findModifier(m => m.is("TerastallizeAccessModifier")) !== null;
                         if (hasTeraOrb) {
                             const ui = window.globalScene.ui;
-                            const phase = window.globalScene.phaseManager.getCurrentPhase();
-                            // Check if we are in a phase that supports the Tera command (CommandPhase)
-                            if (phase && typeof phase.getFieldIndex === 'function') {
-                                ui.setMode(3, phase.getFieldIndex(), 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                            let activeIdx = 0;
+
+                            if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].activeBattlerIndex === 'number') {
+                                activeIdx = ui.handlers[2].activeBattlerIndex;
+                            } else if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].fieldIndex === 'number') {
+                                activeIdx = ui.handlers[2].fieldIndex;
+                            } else {
+                                // Ultimate fallback to Phase Manager
+                                const phase = window.globalScene.phaseManager.getCurrentPhase();
+                                if (phase && typeof phase.getFieldIndex === 'function') {
+                                    activeIdx = phase.getFieldIndex();
+                                }
                             }
+
+                            ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
                         }
                     }
                     return;
@@ -140,9 +150,10 @@
                     if (container.list) {
                         container.list.forEach(child => {
                             if (child.name === "terastallize-button") {
-                                child.setAlpha(1);
-                                child.setVisible(true);
-                                child.setInteractive();
+                                if (child.visible) {
+                                    child.setAlpha(1);
+                                    child.setInteractive();
+                                }
                             } else { child.setAlpha(0); }
                         });
                     }
