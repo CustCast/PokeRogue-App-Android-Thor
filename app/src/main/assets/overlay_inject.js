@@ -1,6 +1,7 @@
 (function() {
     'use strict';
-    const Button = { UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3, SUBMIT: 4, ACTION: 5, CANCEL: 6, MENU: 7 };
+    const Key = { UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', A: 'z', B: 'x', START: 'Escape', SELECT: 'Shift' };
+    const KeyCode = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, A: 90, B: 88, START: 27, SELECT: 16 };
     const Command = { FIGHT: 0, BALL: 1, POKEMON: 2, RUN: 3, TERA: 4 };
     const UiMode = { MESSAGE: 0, TITLE: 1, COMMAND: 2, FIGHT: 3, BALL: 4, TARGET_SELECT: 5 };
     const MoveTarget = {
@@ -28,27 +29,84 @@
         return res;
     };
 
+    function fireKeyDown(key, code) {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: key, keyCode: code, which: code, bubbles: true }));
+    }
+    function fireKeyUp(key, code) {
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: key, keyCode: code, which: code, bubbles: true }));
+    }
+
     window.ThorBridge = {
         execute: function(commandStr) {
-            if (!window.globalScene || !window.globalScene.ui) return;
-            const ui = window.globalScene.ui;
-            const currentMode = ui.getMode();
+            if (!window.globalScene) return;
+
             try {
-                if (commandStr === "ACTION_BACK") { ui.processInput(Button.CANCEL); return; }
-                if (currentMode === UiMode.COMMAND) {
-                    switch (commandStr) {
-                        case "MAIN_FIGHT": ui.setCursor(Command.FIGHT); ui.processInput(Button.ACTION); break;
-                        case "MAIN_BALL": ui.setCursor(Command.BALL); ui.processInput(Button.ACTION); break;
-                        case "MAIN_POKEMON": ui.setCursor(Command.POKEMON); ui.processInput(Button.ACTION); break;
-                        case "MAIN_RUN": ui.setCursor(Command.RUN); ui.processInput(Button.ACTION); break;
+                // 1. Handle Decoupled General Inputs
+                if (commandStr.endsWith("_DOWN")) {
+                    const input = commandStr.replace("INPUT_", "").replace("_DOWN", "");
+                    if (Key[input]) fireKeyDown(Key[input], KeyCode[input]);
+
+                    // SPECIAL: L1 Bumper Tera Logic
+                    if (input === "L1") {
+                        const hasTeraOrb = window.globalScene.findModifier(m => m.is("TerastallizeAccessModifier")) !== null;
+                        if (hasTeraOrb) {
+                            const ui = window.globalScene.ui;
+                            const phase = window.globalScene.phaseManager.getCurrentPhase();
+                            // Check if we are in a phase that supports the Tera command (CommandPhase)
+                            if (phase && typeof phase.getFieldIndex === 'function') {
+                                ui.setMode(3, phase.getFieldIndex(), 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                            }
+                        }
                     }
-                } else if (currentMode === UiMode.FIGHT && commandStr.startsWith("SELECT_MOVE_")) {
-                    const idx = parseInt(commandStr.replace("SELECT_MOVE_", ""), 10);
-                    if (!isNaN(idx)) { ui.setCursor(idx); ui.processInput(Button.ACTION); }
-                } else if (currentMode === UiMode.TARGET_SELECT && commandStr.startsWith("SELECT_TARGET_")) {
-                    const idx = parseInt(commandStr.replace("SELECT_TARGET_", ""), 10);
-                    if (!isNaN(idx)) { ui.setCursor(idx); ui.processInput(Button.ACTION); }
+                    return;
                 }
+
+                if (commandStr.endsWith("_UP")) {
+                    const input = commandStr.replace("INPUT_", "").replace("_UP", "");
+                    if (Key[input]) fireKeyUp(Key[input], KeyCode[input]);
+                    return;
+                }
+
+                if (!window.globalScene.ui) return;
+                const ui = window.globalScene.ui;
+
+                if (commandStr === "ACTION_BACK") {
+                    fireKeyDown('x', 88);
+                    setTimeout(() => fireKeyUp('x', 88), 50);
+                    return;
+                }
+
+                // Hover Sync
+                if (commandStr.startsWith("HOVER_MAIN_")) {
+                    const cmd = commandStr.replace("HOVER_MAIN_", "");
+                    if (cmd === "FIGHT") ui.setCursor(0);
+                    else if (cmd === "BALL") ui.setCursor(1);
+                    else if (cmd === "POKEMON") ui.setCursor(2);
+                    else if (cmd === "RUN") ui.setCursor(3);
+                    return;
+                }
+
+                if (commandStr.startsWith("HOVER_MOVE_") || commandStr.startsWith("HOVER_TARGET_")) {
+                    const idx = parseInt(commandStr.split('_').pop(), 10);
+                    if (!isNaN(idx)) ui.setCursor(idx);
+                    return;
+                }
+
+                // Explicit Action Selection
+                if (commandStr.startsWith("SELECT_MOVE_") || commandStr.startsWith("SELECT_TARGET_")) {
+                     const idx = parseInt(commandStr.split('_').pop(), 10);
+                     if (!isNaN(idx)) {
+                         ui.setCursor(idx);
+                         fireKeyDown('z', 90);
+                         setTimeout(() => fireKeyUp('z', 90), 50);
+                     }
+                     return;
+                }
+
+                if (commandStr === "MAIN_FIGHT") { ui.setCursor(0); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
+                if (commandStr === "MAIN_BALL") { ui.setCursor(1); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
+                if (commandStr === "MAIN_POKEMON") { ui.setCursor(2); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
+                if (commandStr === "MAIN_RUN") { ui.setCursor(3); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
             } catch (e) {}
         }
     };
@@ -69,6 +127,27 @@
             let payloadData = {};
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
+
+            // RE-ENABLE TERA INTERACTIVITY
+            try {
+                if (ui.getMessageHandler && typeof ui.getMessageHandler === 'function') {
+                    const msgHandler = ui.getMessageHandler();
+                    if (msgHandler && msgHandler.commandWindow) msgHandler.commandWindow.setAlpha(0);
+                }
+                if (ui.handlers && ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].commandsContainer) {
+                    const container = ui.handlers[UiMode.COMMAND].commandsContainer;
+                    container.setAlpha(1);
+                    if (container.list) {
+                        container.list.forEach(child => {
+                            if (child.name === "terastallize-button") {
+                                child.setAlpha(1);
+                                child.setVisible(true);
+                                child.setInteractive();
+                            } else { child.setAlpha(0); }
+                        });
+                    }
+                }
+            } catch (e) {}
 
             if (!ui.overlayActive) {
                  if (currentMode === UiMode.COMMAND) {
