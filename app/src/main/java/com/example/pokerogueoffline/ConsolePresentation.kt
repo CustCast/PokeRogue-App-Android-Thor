@@ -110,7 +110,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
 
             // Contextual Routing Matrix
             when (currentState) {
-                "FIGHT_MENU", "TARGET_SELECT", "MAIN_MENU" -> {
+                "FIGHT_MENU", "MAIN_MENU" -> {
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,

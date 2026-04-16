@@ -48,24 +48,27 @@
 
                     // SPECIAL: L1 Bumper Tera Logic
                     if (input === "L1") {
-                        const hasTeraOrb = window.globalScene.findModifier(m => m.is("TerastallizeAccessModifier")) !== null;
-                        if (hasTeraOrb) {
-                            const ui = window.globalScene.ui;
-                            let activeIdx = 0;
+                        const ui = window.globalScene.ui;
 
-                            if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].activeBattlerIndex === 'number') {
-                                activeIdx = ui.handlers[2].activeBattlerIndex;
-                            } else if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].fieldIndex === 'number') {
-                                activeIdx = ui.handlers[2].fieldIndex;
-                            } else {
-                                // Ultimate fallback to Phase Manager
-                                const phase = window.globalScene.phaseManager.getCurrentPhase();
-                                if (phase && typeof phase.getFieldIndex === 'function') {
-                                    activeIdx = phase.getFieldIndex();
+                        // Check if we are in the command handler and if it allows Tera
+                        if (ui && ui.handlers && ui.handlers[2] && typeof ui.handlers[2].canTera === 'function') {
+                            if (ui.handlers[2].canTera()) {
+                                let activeIdx = 0;
+
+                                if (typeof ui.handlers[2].activeBattlerIndex === 'number') {
+                                    activeIdx = ui.handlers[2].activeBattlerIndex;
+                                } else if (typeof ui.handlers[2].fieldIndex === 'number') {
+                                    activeIdx = ui.handlers[2].fieldIndex;
+                                } else {
+                                    // Ultimate fallback to Phase Manager
+                                    const phase = window.globalScene.phaseManager.getCurrentPhase();
+                                    if (phase && typeof phase.getFieldIndex === 'function') {
+                                        activeIdx = phase.getFieldIndex();
+                                    }
                                 }
-                            }
 
-                            ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                                ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                            }
                         }
                     }
                     return;
