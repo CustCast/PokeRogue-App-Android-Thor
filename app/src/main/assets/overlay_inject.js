@@ -48,24 +48,27 @@
 
                     // SPECIAL: L1 Bumper Tera Logic
                     if (input === "L1") {
-                        const hasTeraOrb = window.globalScene.findModifier(m => m.is("TerastallizeAccessModifier")) !== null;
-                        if (hasTeraOrb) {
-                            const ui = window.globalScene.ui;
-                            let activeIdx = 0;
+                        const ui = window.globalScene.ui;
 
-                            if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].activeBattlerIndex === 'number') {
-                                activeIdx = ui.handlers[2].activeBattlerIndex;
-                            } else if (ui.handlers && ui.handlers[2] && typeof ui.handlers[2].fieldIndex === 'number') {
-                                activeIdx = ui.handlers[2].fieldIndex;
-                            } else {
-                                // Ultimate fallback to Phase Manager
-                                const phase = window.globalScene.phaseManager.getCurrentPhase();
-                                if (phase && typeof phase.getFieldIndex === 'function') {
-                                    activeIdx = phase.getFieldIndex();
+                        // Check if we are in the command handler and if it allows Tera
+                        if (ui && ui.handlers && ui.handlers[2] && typeof ui.handlers[2].canTera === 'function') {
+                            if (ui.handlers[2].canTera()) {
+                                let activeIdx = 0;
+
+                                if (typeof ui.handlers[2].activeBattlerIndex === 'number') {
+                                    activeIdx = ui.handlers[2].activeBattlerIndex;
+                                } else if (typeof ui.handlers[2].fieldIndex === 'number') {
+                                    activeIdx = ui.handlers[2].fieldIndex;
+                                } else {
+                                    // Ultimate fallback to Phase Manager
+                                    const phase = window.globalScene.phaseManager.getCurrentPhase();
+                                    if (phase && typeof phase.getFieldIndex === 'function') {
+                                        activeIdx = phase.getFieldIndex();
+                                    }
                                 }
-                            }
 
-                            ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                                ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
+                            }
                         }
                     }
                     return;
@@ -129,8 +132,126 @@
         return field[0];
     }
 
+
+    const initUIHiding = () => {
+        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initUIHiding, 100);
+
+        const commandHandler = window.globalScene.ui.handlers[2]; // UiMode.COMMAND
+        const fightHandler = window.globalScene.ui.handlers[3]; // UiMode.FIGHT
+
+        // Hide Command Menu buttons (leaves "What will X do?" prompt visible)
+        if (commandHandler && commandHandler.commandsContainer) {
+            commandHandler.commandsContainer.setAlpha(0);
+
+            // Prevent Phaser from accidentally resetting the alpha later
+            if (!commandHandler.commandsContainer._hackedAlpha) {
+                const originalSetAlpha = commandHandler.commandsContainer.setAlpha;
+                commandHandler.commandsContainer.setAlpha = function() {
+                    return originalSetAlpha.call(this, 0);
+                };
+                commandHandler.commandsContainer._hackedAlpha = true;
+            }
+        }
+
+        // Hide Fight Menu (Moves and PP/Type Info)
+        if (fightHandler) {
+            if (fightHandler.movesContainer) {
+                fightHandler.movesContainer.setAlpha(0);
+                if (!fightHandler.movesContainer._hackedAlpha) {
+                    const origMovesAlpha = fightHandler.movesContainer.setAlpha;
+                    fightHandler.movesContainer.setAlpha = function() { return origMovesAlpha.call(this, 0); };
+                    fightHandler.movesContainer._hackedAlpha = true;
+                }
+            }
+
+            // Hides the move info (PP, accuracy, power box)
+            if (fightHandler.moveInfoOverlay) {
+                fightHandler.moveInfoOverlay.setAlpha(0);
+                if (!fightHandler.moveInfoOverlay._hackedAlpha) {
+                    const origInfoAlpha = fightHandler.moveInfoOverlay.setAlpha;
+                    fightHandler.moveInfoOverlay.setAlpha = function() { return origInfoAlpha.call(this, 0); };
+                    fightHandler.moveInfoOverlay._hackedAlpha = true;
+                }
+            }
+        }
+    };
+
+    const initTeraBypass = () => {
+        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initTeraBypass, 100);
+
+        const commandHandler = window.globalScene.ui.handlers[2]; // UiMode.COMMAND
+        if (!commandHandler) return;
+
+        if (!commandHandler._hackedInput) {
+            const originalProcessInput = commandHandler.processInput;
+
+            commandHandler.processInput = function(button) {
+                // Button.LEFT is 4, Button.RIGHT is 5
+                const cursor = this.getCursor();
+
+                if (button === 4) { // LEFT
+                    // If on FIGHT (0) or POKEMON (2) and it tries to go left to TERA, block it
+                    if (cursor === 0 || cursor === 2) {
+                        if (this.canTera && this.canTera()) {
+                           // Play the error sound or just consume it
+                           window.globalScene.ui.playSelect();
+                           return true;
+                        }
+                    }
+                }
+
+                if (button === 5) { // RIGHT
+                     // If cursor is somehow already on TERA (4) and hits right, force it back to FIGHT (0)
+                     if (cursor === 4) {
+                         this.setCursor(0);
+                         window.globalScene.ui.playSelect();
+                         return true;
+                     }
+                }
+
+                // Otherwise, process normally
+                return originalProcessInput.call(this, button);
+            };
+            commandHandler._hackedInput = true;
+        }
+    };
+
+
+    const initCursorSync = () => {
+        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initCursorSync, 100);
+
+        const commandHandler = window.globalScene.ui.handlers[2]; // UiMode.COMMAND
+        const fightHandler = window.globalScene.ui.handlers[3]; // UiMode.FIGHT
+
+        if (commandHandler && !commandHandler._hackedCursor) {
+            const origCommandSetCursor = commandHandler.setCursor;
+            commandHandler.setCursor = function(cursorIndex) {
+                const result = origCommandSetCursor.call(this, cursorIndex);
+                if (typeof syncState === 'function') syncState();
+                return result;
+            };
+            commandHandler._hackedCursor = true;
+        }
+
+        if (fightHandler && !fightHandler._hackedCursor) {
+            const origFightSetCursor = fightHandler.setCursor;
+            fightHandler.setCursor = function(cursorIndex) {
+                const result = origFightSetCursor.call(this, cursorIndex);
+                if (typeof syncState === 'function') syncState();
+                return result;
+            };
+            fightHandler._hackedCursor = true;
+        }
+    };
+
+    initUIHiding();
+    initTeraBypass();
+    initCursorSync();
+
+
     let lastPayloadStr = "";
-    setInterval(() => {
+
+    const syncState = () => {
         if (!window.globalScene || !window.globalScene.ui) return;
         try {
             let stateStr = "BUSY";
@@ -138,33 +259,19 @@
             const ui = window.globalScene.ui;
             const currentMode = ui.getMode();
 
-            // RE-ENABLE TERA INTERACTIVITY
-            try {
-                if (ui.getMessageHandler && typeof ui.getMessageHandler === 'function') {
-                    const msgHandler = ui.getMessageHandler();
-                    if (msgHandler && msgHandler.commandWindow) msgHandler.commandWindow.setAlpha(0);
-                }
-                if (ui.handlers && ui.handlers[UiMode.COMMAND] && ui.handlers[UiMode.COMMAND].commandsContainer) {
-                    const container = ui.handlers[UiMode.COMMAND].commandsContainer;
-                    container.setAlpha(1);
-                    if (container.list) {
-                        container.list.forEach(child => {
-                            if (child.name === "terastallize-button") {
-                                if (child.visible) {
-                                    child.setAlpha(1);
-                                    child.setInteractive();
-                                }
-                            } else { child.setAlpha(0); }
-                        });
-                    }
-                }
-            } catch (e) {}
-
             if (!ui.overlayActive) {
                  if (currentMode === UiMode.COMMAND) {
                      stateStr = "MAIN_MENU";
+                     const handler = ui.handlers[UiMode.COMMAND];
+                     if (handler && typeof handler.getCursor === 'function') {
+                         payloadData.cursor = handler.getCursor();
+                     }
                  } else if (currentMode === UiMode.FIGHT) {
                      stateStr = "FIGHT_MENU";
+                     const handler = ui.handlers[UiMode.FIGHT];
+                     if (handler && typeof handler.getCursor === 'function') {
+                         payloadData.cursor = handler.getCursor();
+                     }
                      if (typeof window.globalScene.getPlayerField === 'function') {
                          const field = window.globalScene.getPlayerField();
                          if (field && field.length > 0) {
@@ -225,5 +332,8 @@
                 }
             }
         } catch (e) {}
-    }, 500);
+    };
+
+    setInterval(syncState, 500);
+
 })();

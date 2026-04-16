@@ -82,17 +82,6 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         btnFightBack.setOnClickListener { onCommand("ACTION_BACK") }
 
         btnTargetBack.setOnClickListener { onCommand("ACTION_BACK") }
-
-        // Setup Hover Focus Listeners
-        btnMainFight.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_FIGHT") }
-        btnMainBall.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_BALL") }
-        btnMainPokemon.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_POKEMON") }
-        btnMainRun.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MAIN_RUN") }
-
-        btnMove0.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_0") }
-        btnMove1.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_1") }
-        btnMove2.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_2") }
-        btnMove3.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_MOVE_3") }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -101,40 +90,36 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         val suffix = if (isDown) "_DOWN" else if (isUp) "_UP" else ""
 
         if ((isDown && event.repeatCount == 0) || isUp) {
-            // Global overrides
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
-                onCommand("INPUT_START$suffix")
-                return true
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT) {
-                onCommand("INPUT_SELECT$suffix")
-                return true
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L1) {
-                onCommand("INPUT_L1$suffix")
-                return true
+            // Global Interrupts (Always Top Screen)
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_START -> { onCommand("INPUT_START$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_SELECT -> { onCommand("INPUT_SELECT$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_L1 -> { onCommand("INPUT_L1$suffix"); return true }
             }
 
-            // BUSY state passthroughs
-            if (currentState == "BUSY") {
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
-                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> { onCommand("INPUT_B$suffix"); return true }
-                }
+            // Contextual Routing Matrix is now purely Top Screen driven!
+            // All D-Pad, A, and B inputs are blindly forwarded to the JS Bridge.
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> { onCommand("INPUT_B$suffix"); return true }
             }
         }
 
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_UP) {
-                onCommand("ACTION_BACK")
-            }
-            return true // Consume event to prevent dismissal
-        }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun setButtonActive(btn: Button, isActive: Boolean) {
+        if (isActive) {
+            btn.setBackgroundResource(R.drawable.retro_button_border_focused)
+            btn.setTextColor(android.graphics.Color.parseColor("#000000"))
+        } else {
+            btn.setBackgroundResource(R.drawable.retro_button_border)
+            btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+        }
     }
 
     fun onStateChanged(payload: String) {
@@ -144,10 +129,26 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         val data = json.optJSONObject("data")
 
         when (state) {
-            "MAIN_MENU" -> viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutMainMenu)
+            "MAIN_MENU" -> {
+                viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutMainMenu)
+
+                // Sync visual state from game engine cursor
+                val cursor = data?.optInt("cursor", -1) ?: -1
+                setButtonActive(btnMainFight, cursor == 0 || cursor == -1)
+                setButtonActive(btnMainBall, cursor == 1)
+                setButtonActive(btnMainPokemon, cursor == 2)
+                setButtonActive(btnMainRun, cursor == 3)
+            }
             "FIGHT_MENU" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
                 updateFightMenu(data)
+
+                // Sync visual state from game engine cursor
+                val cursor = data?.optInt("cursor", -1) ?: -1
+                setButtonActive(btnMove0, cursor == 0 || cursor == -1)
+                setButtonActive(btnMove1, cursor == 1)
+                setButtonActive(btnMove2, cursor == 2)
+                setButtonActive(btnMove3, cursor == 3)
             }
             "TARGET_SELECT" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutTargetSelect)
