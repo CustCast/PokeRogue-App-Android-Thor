@@ -1,7 +1,39 @@
 (function() {
     'use strict';
-    const Key = { UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', A: 'z', B: 'x', START: 'Escape', SELECT: 'Shift' };
-    const KeyCode = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, A: 90, B: 88, START: 27, SELECT: 16 };
+
+    const ButtonEnum = { UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3, SELECT: 4, A: 5, B: 6, START: 7 };
+
+    function getKeyCodeForButton(buttonEnumValue) {
+        if (!window.globalScene || !window.globalScene.inputController) return null;
+
+        // Get the active configuration for the keyboard (PokeRogue stores the active keyboard profile as 'default')
+        const config = window.globalScene.inputController.configs["default"];
+        if (!config) return null;
+
+        // Use custom user binds first, fallback to game defaults
+        const activeMapping = config.custom || config.default;
+
+        // Reverse lookup: Find the KEY_ string (e.g., "KEY_Z") that maps to the requested Button
+        let mappedKeyString = null;
+        for (const [keyLabel, boundButtonValue] of Object.entries(activeMapping)) {
+            if (boundButtonValue === buttonEnumValue) {
+                mappedKeyString = keyLabel;
+                break;
+            }
+        }
+
+        if (!mappedKeyString) return null;
+
+        // Finally, lookup the exact keyCode integer from the config's mapping dictionary
+        return config.mapping[mappedKeyString] ?? null;
+    }
+
+    function getEventKeyStr(keyCode) {
+        // A minimal mapping back to strings for fireKeyDown if needed, though most games only strictly check keyCode.
+        // PokeRogue's raw input system relies heavily on Phaser's KeyCode enum.
+        return String.fromCharCode(keyCode);
+    }
+
     const Command = { FIGHT: 0, BALL: 1, POKEMON: 2, RUN: 3, TERA: 4 };
     const UiMode = { MESSAGE: 0, TITLE: 1, COMMAND: 2, FIGHT: 3, BALL: 4, TARGET_SELECT: 5 };
     const MoveTarget = {
@@ -42,11 +74,19 @@
 
             try {
                 // 1. Handle Decoupled General Inputs
+
                 if (commandStr.endsWith("_DOWN")) {
                     const input = commandStr.replace("INPUT_", "").replace("_DOWN", "");
-                    if (Key[input]) fireKeyDown(Key[input], KeyCode[input]);
+
+                    if (ButtonEnum[input] !== undefined) {
+                        const keyCode = getKeyCodeForButton(ButtonEnum[input]);
+                        if (keyCode !== null) {
+                            fireKeyDown(getEventKeyStr(keyCode), keyCode);
+                        }
+                    }
 
                     // SPECIAL: L1 Bumper Tera Logic
+
                     if (input === "L1") {
                         const ui = window.globalScene.ui;
 
@@ -74,52 +114,60 @@
                     return;
                 }
 
+
                 if (commandStr.endsWith("_UP")) {
                     const input = commandStr.replace("INPUT_", "").replace("_UP", "");
-                    if (Key[input]) fireKeyUp(Key[input], KeyCode[input]);
+
+                    if (ButtonEnum[input] !== undefined) {
+                        const keyCode = getKeyCodeForButton(ButtonEnum[input]);
+                        if (keyCode !== null) {
+                            fireKeyUp(getEventKeyStr(keyCode), keyCode);
+                        }
+                    }
                     return;
                 }
+
+
 
                 if (!window.globalScene.ui) return;
                 const ui = window.globalScene.ui;
 
                 if (commandStr === "ACTION_BACK") {
-                    fireKeyDown('x', 88);
-                    setTimeout(() => fireKeyUp('x', 88), 50);
+                    const keyCode = getKeyCodeForButton(ButtonEnum.B);
+                    if (keyCode !== null) {
+                        fireKeyDown(getEventKeyStr(keyCode), keyCode);
+                        setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
+                    }
                     return;
                 }
 
-                // Hover Sync
-                if (commandStr.startsWith("HOVER_MAIN_")) {
-                    const cmd = commandStr.replace("HOVER_MAIN_", "");
-                    if (cmd === "FIGHT") ui.setCursor(0);
-                    else if (cmd === "BALL") ui.setCursor(1);
-                    else if (cmd === "POKEMON") ui.setCursor(2);
-                    else if (cmd === "RUN") ui.setCursor(3);
-                    return;
-                }
-
-                if (commandStr.startsWith("HOVER_MOVE_") || commandStr.startsWith("HOVER_TARGET_")) {
-                    const idx = parseInt(commandStr.split('_').pop(), 10);
-                    if (!isNaN(idx)) ui.setCursor(idx);
-                    return;
-                }
-
-                // Explicit Action Selection
+                // Explicit Action Selection via Touch
                 if (commandStr.startsWith("SELECT_MOVE_") || commandStr.startsWith("SELECT_TARGET_")) {
                      const idx = parseInt(commandStr.split('_').pop(), 10);
                      if (!isNaN(idx)) {
                          ui.setCursor(idx);
-                         fireKeyDown('z', 90);
-                         setTimeout(() => fireKeyUp('z', 90), 50);
+                         const keyCode = getKeyCodeForButton(ButtonEnum.A);
+                         if (keyCode !== null) {
+                             fireKeyDown(getEventKeyStr(keyCode), keyCode);
+                             setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
+                         }
                      }
                      return;
                 }
 
-                if (commandStr === "MAIN_FIGHT") { ui.setCursor(0); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_BALL") { ui.setCursor(1); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_POKEMON") { ui.setCursor(2); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_RUN") { ui.setCursor(3); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
+                const handleMainTouch = (idx) => {
+                    ui.setCursor(idx);
+                    const keyCode = getKeyCodeForButton(ButtonEnum.A);
+                    if (keyCode !== null) {
+                        fireKeyDown(getEventKeyStr(keyCode), keyCode);
+                        setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
+                    }
+                };
+
+                if (commandStr === "MAIN_FIGHT") { handleMainTouch(0); }
+                if (commandStr === "MAIN_BALL") { handleMainTouch(1); }
+                if (commandStr === "MAIN_POKEMON") { handleMainTouch(2); }
+                if (commandStr === "MAIN_RUN") { handleMainTouch(3); }
             } catch (e) {}
         }
     };

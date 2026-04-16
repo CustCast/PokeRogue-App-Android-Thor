@@ -186,8 +186,6 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         targetButtonsContainer.removeAllViews()
 
         if (targets != null && targets.length() > 0) {
-            val firstTarget = targets.getInt(0)
-
             val isFoeAoe = targetType == "ALL_NEAR_ENEMIES" || targetType == "ALL_ENEMIES" || targetType == "ENEMY_SIDE"
             val isFriendlyFireAoe = targetType == "ALL_NEAR_OTHERS" || targetType == "ALL" || targetType == "BOTH_SIDES"
 
@@ -206,8 +204,10 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 layoutParams.setMargins(16, 16, 16, 16)
                 btn.layoutParams = layoutParams
 
+                // For AOE, it selects index 0 of the targets list
+                val firstTarget = targets.getInt(0)
                 btn.setOnClickListener { onCommand("SELECT_TARGET_$firstTarget") }
-                btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$firstTarget") }
+
                 targetButtonsContainer.addView(btn)
             } else {
                 for (i in 0 until targets.length()) {
@@ -226,9 +226,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                     layoutParams.setMargins(16, 16, 16, 16)
                     btn.layoutParams = layoutParams
 
-                    // Send target command dynamically
                     btn.setOnClickListener { onCommand("SELECT_TARGET_$targetIndex") }
-                    btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$targetIndex") }
 
                     targetButtonsContainer.addView(btn)
                 }
