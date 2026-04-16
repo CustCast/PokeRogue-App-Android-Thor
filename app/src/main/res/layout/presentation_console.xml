@@ -48,20 +48,6 @@
                 android:backgroundTint="@null" />
 
             <Button
-                android:id="@+id/btnMainPokemon"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_rowWeight="1"
-                android:layout_columnWeight="1"
-                android:layout_margin="8dp"
-                android:background="@drawable/retro_button_border"
-                android:text="POKEMON"
-                android:textColor="#33FF33"
-                android:textSize="24sp"
-                android:backgroundTint="@null" />
-
-            <Button
                 android:id="@+id/btnMainBall"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
@@ -71,6 +57,20 @@
                 android:layout_margin="8dp"
                 android:background="@drawable/retro_button_border"
                 android:text="BALL"
+                android:textColor="#33FF33"
+                android:textSize="24sp"
+                android:backgroundTint="@null" />
+
+            <Button
+                android:id="@+id/btnMainPokemon"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_rowWeight="1"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                android:background="@drawable/retro_button_border"
+                android:text="POKEMON"
                 android:textColor="#33FF33"
                 android:textSize="24sp"
                 android:backgroundTint="@null" />
