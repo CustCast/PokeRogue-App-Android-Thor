@@ -168,6 +168,7 @@
                 if (commandStr === "MAIN_BALL") { handleMainTouch(1); }
                 if (commandStr === "MAIN_POKEMON") { handleMainTouch(2); }
                 if (commandStr === "MAIN_RUN") { handleMainTouch(3); }
+                if (commandStr === "MAIN_TERA") { handleMainTouch(4); }
             } catch (e) {}
         }
     };
@@ -181,6 +182,11 @@
     }
 
 
+
+    initCustomCommandDPad();
+    initCursorSync();
+
+
     const initUIHiding = () => {
         if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initUIHiding, 100);
 
@@ -190,8 +196,6 @@
         // Hide Command Menu buttons (leaves "What will X do?" prompt visible)
         if (commandHandler && commandHandler.commandsContainer) {
             commandHandler.commandsContainer.setAlpha(0);
-
-            // Prevent Phaser from accidentally resetting the alpha later
             if (!commandHandler.commandsContainer._hackedAlpha) {
                 const originalSetAlpha = commandHandler.commandsContainer.setAlpha;
                 commandHandler.commandsContainer.setAlpha = function() {
@@ -211,8 +215,6 @@
                     fightHandler.movesContainer._hackedAlpha = true;
                 }
             }
-
-            // Hides the move info (PP, accuracy, power box)
             if (fightHandler.moveInfoOverlay) {
                 fightHandler.moveInfoOverlay.setAlpha(0);
                 if (!fightHandler.moveInfoOverlay._hackedAlpha) {
@@ -224,8 +226,8 @@
         }
     };
 
-    const initTeraBypass = () => {
-        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initTeraBypass, 100);
+    const initCustomCommandDPad = () => {
+        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initCustomCommandDPad, 100);
 
         const commandHandler = window.globalScene.ui.handlers[2]; // UiMode.COMMAND
         if (!commandHandler) return;
@@ -234,36 +236,41 @@
             const originalProcessInput = commandHandler.processInput;
 
             commandHandler.processInput = function(button) {
-                // Button.LEFT is 4, Button.RIGHT is 5
                 const cursor = this.getCursor();
+                if (button >= 0 && button <= 3) {
+                    let newCursor = null;
+                    const canTera = this.canTera && this.canTera();
 
-                if (button === 4) { // LEFT
-                    // If on FIGHT (0) or POKEMON (2) and it tries to go left to TERA, block it
-                    if (cursor === 0 || cursor === 2) {
-                        if (this.canTera && this.canTera()) {
-                           // Play the error sound or just consume it
-                           window.globalScene.ui.playSelect();
-                           return true;
-                        }
+                    if (cursor === 0) { // Fight
+                        if (button === 0 && canTera) newCursor = 4; // UP -> Tera
+                        if (button === 1) newCursor = 3; // DOWN -> Run
+                        if (button === 2) newCursor = 1; // LEFT -> Bag/Ball
+                        if (button === 3) newCursor = 2; // RIGHT -> Pokemon
+                    } else if (cursor === 1) { // Bag/Ball
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 3) newCursor = 3; // RIGHT -> Run
+                    } else if (cursor === 3) { // Run
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 2) newCursor = 1; // LEFT -> Bag/Ball
+                        if (button === 3) newCursor = 2; // RIGHT -> Pokemon
+                    } else if (cursor === 2) { // Pokemon
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 2) newCursor = 3; // LEFT -> Run
+                    } else if (cursor === 4) { // Tera
+                        if (button === 1) newCursor = 0; // DOWN -> Fight
                     }
-                }
 
-                if (button === 5) { // RIGHT
-                     // If cursor is somehow already on TERA (4) and hits right, force it back to FIGHT (0)
-                     if (cursor === 4) {
-                         this.setCursor(0);
-                         window.globalScene.ui.playSelect();
-                         return true;
-                     }
+                    if (newCursor !== null) {
+                        this.setCursor(newCursor);
+                        window.globalScene.ui.playSelect();
+                    }
+                    return true;
                 }
-
-                // Otherwise, process normally
                 return originalProcessInput.call(this, button);
             };
             commandHandler._hackedInput = true;
         }
     };
-
 
     const initCursorSync = () => {
         if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initCursorSync, 100);
@@ -293,94 +300,8 @@
     };
 
     initUIHiding();
-    initTeraBypass();
+    initCustomCommandDPad();
     initCursorSync();
-
-
-    let lastPayloadStr = "";
-
-    const syncState = () => {
-        if (!window.globalScene || !window.globalScene.ui) return;
-        try {
-            let stateStr = "BUSY";
-            let payloadData = {};
-            const ui = window.globalScene.ui;
-            const currentMode = ui.getMode();
-
-            if (!ui.overlayActive) {
-                 if (currentMode === UiMode.COMMAND) {
-                     stateStr = "MAIN_MENU";
-                     const handler = ui.handlers[UiMode.COMMAND];
-                     if (handler && typeof handler.getCursor === 'function') {
-                         payloadData.cursor = handler.getCursor();
-                     }
-                 } else if (currentMode === UiMode.FIGHT) {
-                     stateStr = "FIGHT_MENU";
-                     const handler = ui.handlers[UiMode.FIGHT];
-                     if (handler && typeof handler.getCursor === 'function') {
-                         payloadData.cursor = handler.getCursor();
-                     }
-                     if (typeof window.globalScene.getPlayerField === 'function') {
-                         const field = window.globalScene.getPlayerField();
-                         if (field && field.length > 0) {
-                             const active = getActivePokemon(ui, field);
-                             if (active && (active.getMoveset || active.moveset)) {
-                                 const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
-                                 if (moveset) {
-                                     payloadData.moves = [];
-                                     for (let i = 0; i < 4; i++) {
-                                         const mObj = moveset[i];
-                                         if (mObj && mObj.moveId !== 0) {
-                                             const move = mObj.getMove ? mObj.getMove() : null;
-                                             const name = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
-                                             const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
-                                             const ppUsed = mObj.ppUsed || 0;
-                                             payloadData.moves.push({ index: i, name: name, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 } else if (currentMode === UiMode.TARGET_SELECT) {
-                     stateStr = "TARGET_SELECT";
-                     const handler = ui.handlers[UiMode.TARGET_SELECT];
-                     if (handler && handler.targets) {
-                         payloadData.targets = handler.targets;
-                         if (typeof window.globalScene.getPlayerField === 'function') {
-                             const field = window.globalScene.getPlayerField();
-                             if (field && field.length > 0) {
-                                 const active = getActivePokemon(ui, field);
-                                 if (active && handler.move !== undefined) {
-                                     const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
-                                     if (moveset) {
-                                         for (let i = 0; i < moveset.length; i++) {
-                                             const mObj = moveset[i];
-                                             if (mObj && mObj.moveId === handler.move) {
-                                                 const move = mObj.getMove ? mObj.getMove() : null;
-                                                 payloadData.moveName = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
-                                                 if (move && move.moveTarget !== undefined) {
-                                                     payloadData.targetType = MoveTarget[move.moveTarget] || move.moveTarget.toString();
-                                                 }
-                                                 break;
-                                             }
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 }
-            }
-            const payloadStr = JSON.stringify({ state: stateStr, data: payloadData });
-            if (payloadStr !== lastPayloadStr) {
-                lastPayloadStr = payloadStr;
-                if (window.AndroidInterface && typeof window.AndroidInterface.onStateChanged === 'function') {
-                    window.AndroidInterface.onStateChanged(payloadStr);
-                }
-            }
-        } catch (e) {}
-    };
 
     setInterval(syncState, 500);
 

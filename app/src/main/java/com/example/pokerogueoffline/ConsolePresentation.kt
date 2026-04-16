@@ -20,6 +20,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     private lateinit var layoutFightMenu: View
     private lateinit var layoutTargetSelect: View
 
+    private lateinit var btnMainTera: Button
     private lateinit var btnMainFight: Button
     private lateinit var btnMainBall: Button
     private lateinit var btnMainPokemon: Button
@@ -51,6 +52,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         layoutFightMenu = findViewById(R.id.layoutFightMenu)
         layoutTargetSelect = findViewById(R.id.layoutTargetSelect)
 
+        btnMainTera = findViewById(R.id.btnMainTera)
         btnMainFight = findViewById(R.id.btnMainFight)
         btnMainBall = findViewById(R.id.btnMainBall)
         btnMainPokemon = findViewById(R.id.btnMainPokemon)
@@ -70,6 +72,7 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     }
 
     private fun setupListeners() {
+        btnMainTera.setOnClickListener { onCommand("MAIN_TERA") }
         btnMainFight.setOnClickListener { onCommand("MAIN_FIGHT") }
         btnMainBall.setOnClickListener { onCommand("MAIN_BALL") }
         btnMainPokemon.setOnClickListener { onCommand("MAIN_POKEMON") }
@@ -134,10 +137,19 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
 
                 // Sync visual state from game engine cursor
                 val cursor = data?.optInt("cursor", -1) ?: -1
+                val canTera = data?.optBoolean("canTera", false) ?: false
+
+                if (canTera) {
+                    btnMainTera.visibility = View.VISIBLE
+                } else {
+                    btnMainTera.visibility = View.GONE
+                }
+
                 setButtonActive(btnMainFight, cursor == 0 || cursor == -1)
                 setButtonActive(btnMainBall, cursor == 1)
                 setButtonActive(btnMainPokemon, cursor == 2)
                 setButtonActive(btnMainRun, cursor == 3)
+                setButtonActive(btnMainTera, cursor == 4)
             }
             "FIGHT_MENU" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
