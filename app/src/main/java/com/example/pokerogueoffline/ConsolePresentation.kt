@@ -101,39 +101,44 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         val suffix = if (isDown) "_DOWN" else if (isUp) "_UP" else ""
 
         if ((isDown && event.repeatCount == 0) || isUp) {
-            // Global overrides
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
-                onCommand("INPUT_START$suffix")
-                return true
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT) {
-                onCommand("INPUT_SELECT$suffix")
-                return true
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L1) {
-                onCommand("INPUT_L1$suffix")
-                return true
+            // Global Interrupts (Always Top Screen)
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_START -> { onCommand("INPUT_START$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_SELECT -> { onCommand("INPUT_SELECT$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_L1 -> { onCommand("INPUT_L1$suffix"); return true }
             }
 
-            // BUSY state passthroughs
-            if (currentState == "BUSY") {
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
-                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
-                    KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> { onCommand("INPUT_B$suffix"); return true }
+            // Contextual Routing Matrix
+            when (currentState) {
+                "FIGHT_MENU", "TARGET_SELECT", "MAIN_MENU" -> {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> {
+                            // Bottom Screen Authority: Let Android natively handle focus/clicks
+                            return super.dispatchKeyEvent(event)
+                        }
+                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                            // Tell engine to go back
+                            onCommand("INPUT_B$suffix")
+                            return true
+                        }
+                    }
+                }
+                else -> {
+                    // "BUSY" and all other states (Default passthrough to Top Screen)
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
+                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
+                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> { onCommand("INPUT_B$suffix"); return true }
+                    }
                 }
             }
         }
 
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (event.action == KeyEvent.ACTION_UP) {
-                onCommand("ACTION_BACK")
-            }
-            return true // Consume event to prevent dismissal
-        }
         return super.dispatchKeyEvent(event)
     }
 
