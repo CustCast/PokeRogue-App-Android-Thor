@@ -108,49 +108,15 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 KeyEvent.KEYCODE_BUTTON_L1 -> { onCommand("INPUT_L1$suffix"); return true }
             }
 
-            // Contextual Routing Matrix
-            when (currentState) {
-                "FIGHT_MENU", "MAIN_MENU" -> {
-                    when (event.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            if (isDown) {
-                                val direction = when (event.keyCode) {
-                                    KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
-                                    KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT
-                                    else -> View.FOCUS_DOWN
-                                }
-                                val nextView = currentFocus?.focusSearch(direction)
-                                nextView?.requestFocus()
-                            }
-                            return true
-                        }
-                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> {
-                            if (isUp) {
-                                currentFocus?.performClick()
-                            }
-                            return true
-                        }
-                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                            // Tell engine to go back
-                            onCommand("INPUT_B$suffix")
-                            return true
-                        }
-                    }
-                }
-                else -> {
-                    // "BUSY" and all other states (Default passthrough to Top Screen)
-                    when (event.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
-                        KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
-                        KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
-                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
-                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> { onCommand("INPUT_B$suffix"); return true }
-                    }
-                }
+            // Contextual Routing Matrix is now purely Top Screen driven!
+            // All D-Pad, A, and B inputs are blindly forwarded to the JS Bridge.
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
+                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> { onCommand("INPUT_B$suffix"); return true }
             }
         }
 
@@ -166,17 +132,39 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         when (state) {
             "MAIN_MENU" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutMainMenu)
-                // Ensure focus starts on a button if we are entering the menu
-                if (currentFocus == null || !layoutMainMenu.hasFocus()) {
-                    btnMainFight.requestFocus()
+
+                // Sync focus from game engine cursor
+                val cursor = data?.optInt("cursor", -1) ?: -1
+                when (cursor) {
+                    0 -> btnMainFight.requestFocus()
+                    1 -> btnMainBall.requestFocus()
+                    2 -> btnMainPokemon.requestFocus()
+                    3 -> btnMainRun.requestFocus()
+                    else -> {
+                        // Fallback if no cursor data provided yet
+                        if (currentFocus == null || !layoutMainMenu.hasFocus()) {
+                            btnMainFight.requestFocus()
+                        }
+                    }
                 }
             }
             "FIGHT_MENU" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
                 updateFightMenu(data)
-                // Ensure focus starts on the first move
-                if (currentFocus == null || !layoutFightMenu.hasFocus()) {
-                    btnMove0.requestFocus()
+
+                // Sync focus from game engine cursor
+                val cursor = data?.optInt("cursor", -1) ?: -1
+                when (cursor) {
+                    0 -> btnMove0.requestFocus()
+                    1 -> btnMove1.requestFocus()
+                    2 -> btnMove2.requestFocus()
+                    3 -> btnMove3.requestFocus()
+                    else -> {
+                        // Fallback if no cursor data provided yet
+                        if (currentFocus == null || !layoutFightMenu.hasFocus()) {
+                            btnMove0.requestFocus()
+                        }
+                    }
                 }
             }
             "TARGET_SELECT" -> {
