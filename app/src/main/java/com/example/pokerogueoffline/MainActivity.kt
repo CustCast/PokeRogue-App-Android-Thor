@@ -252,17 +252,15 @@ class MainActivity : AppCompatActivity() {
         setupSecondaryDisplay()
     }
 
+    fun getWebView(): WebView = webView
+
     private fun setupSecondaryDisplay() {
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
         val displays = displayManager.displays
         val secondaryDisplay = displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
         if (secondaryDisplay != null) {
-            consolePresentation = ConsolePresentation(this, secondaryDisplay) { commandStr ->
-                runOnUiThread {
-                    webView.evaluateJavascript("window.ThorBridge.execute('$commandStr');", null)
-                }
-            }
+            consolePresentation = ConsolePresentation(this, secondaryDisplay)
             consolePresentation?.show()
         } else {
             Log.d("MainActivity", "No secondary display found. Proceeding in single-screen mode.")
@@ -642,22 +640,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (startScreenLayout.visibility == View.GONE && consolePresentation != null) {
-            // Gamepad Firewall
-            val isControllerInput = when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
-                KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
-                KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ESCAPE -> true
-                else -> false
-            }
-
-            if (isControllerInput) {
-                consolePresentation?.dispatchKeyEvent(event)
-                return true // Unconditionally consume to prevent WebView focus steal
-            }
-        }
         return super.dispatchKeyEvent(event)
     }
 

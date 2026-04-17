@@ -12,7 +12,7 @@ import android.widget.TextView
 import android.widget.ViewFlipper
 import org.json.JSONObject
 
-class ConsolePresentation(outerContext: Context, display: Display, private val onCommand: (String) -> Unit) : Presentation(outerContext, display) {
+class ConsolePresentation(private val outerContext: Context, display: Display) : Presentation(outerContext, display) {
 
     private lateinit var viewFlipper: ViewFlipper
     private lateinit var layoutBusy: View
@@ -71,45 +71,41 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         setupListeners()
     }
 
+    private fun executeFallbackTouch(command: String) {
+        val webView = (outerContext as MainActivity).getWebView()
+        webView.evaluateJavascript("window.ThorInject.executeFallbackTouch('$command');", null)
+    }
+
     private fun setupListeners() {
-        btnMainTera.setOnClickListener { onCommand("MAIN_TERA") }
-        btnMainFight.setOnClickListener { onCommand("MAIN_FIGHT") }
-        btnMainBall.setOnClickListener { onCommand("MAIN_BALL") }
-        btnMainPokemon.setOnClickListener { onCommand("MAIN_POKEMON") }
-        btnMainRun.setOnClickListener { onCommand("MAIN_RUN") }
+        btnMainTera.setOnClickListener { executeFallbackTouch("MAIN_TERA") }
+        btnMainFight.setOnClickListener { executeFallbackTouch("MAIN_FIGHT") }
+        btnMainBall.setOnClickListener { executeFallbackTouch("MAIN_BALL") }
+        btnMainPokemon.setOnClickListener { executeFallbackTouch("MAIN_POKEMON") }
+        btnMainRun.setOnClickListener { executeFallbackTouch("MAIN_RUN") }
 
-        btnMove0.setOnClickListener { onCommand("SELECT_MOVE_0") }
-        btnMove1.setOnClickListener { onCommand("SELECT_MOVE_1") }
-        btnMove2.setOnClickListener { onCommand("SELECT_MOVE_2") }
-        btnMove3.setOnClickListener { onCommand("SELECT_MOVE_3") }
-        btnFightBack.setOnClickListener { onCommand("ACTION_BACK") }
+        btnMove0.setOnClickListener { executeFallbackTouch("SELECT_MOVE_0") }
+        btnMove1.setOnClickListener { executeFallbackTouch("SELECT_MOVE_1") }
+        btnMove2.setOnClickListener { executeFallbackTouch("SELECT_MOVE_2") }
+        btnMove3.setOnClickListener { executeFallbackTouch("SELECT_MOVE_3") }
+        btnFightBack.setOnClickListener { executeFallbackTouch("ACTION_BACK") }
 
-        btnTargetBack.setOnClickListener { onCommand("ACTION_BACK") }
+        btnTargetBack.setOnClickListener { executeFallbackTouch("ACTION_BACK") }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val isDown = event.action == KeyEvent.ACTION_DOWN
-        val isUp = event.action == KeyEvent.ACTION_UP
-        val suffix = if (isDown) "_DOWN" else if (isUp) "_UP" else ""
+        val isControllerInput = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
+            KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_ESCAPE,
+            KeyEvent.KEYCODE_BACK -> true
+            else -> false
+        }
 
-        if ((isDown && event.repeatCount == 0) || isUp) {
-            // Global Interrupts (Always Top Screen)
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_BUTTON_START -> { onCommand("INPUT_START$suffix"); return true }
-                KeyEvent.KEYCODE_BUTTON_SELECT -> { onCommand("INPUT_SELECT$suffix"); return true }
-                KeyEvent.KEYCODE_BUTTON_L1 -> { onCommand("INPUT_L1$suffix"); return true }
-            }
-
-            // Contextual Routing Matrix is now purely Top Screen driven!
-            // All D-Pad, A, and B inputs are blindly forwarded to the JS Bridge.
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> { onCommand("INPUT_UP$suffix"); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { onCommand("INPUT_DOWN$suffix"); return true }
-                KeyEvent.KEYCODE_DPAD_LEFT -> { onCommand("INPUT_LEFT$suffix"); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> { onCommand("INPUT_RIGHT$suffix"); return true }
-                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_ENTER -> { onCommand("INPUT_A$suffix"); return true }
-                KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> { onCommand("INPUT_B$suffix"); return true }
-            }
+        if (isControllerInput) {
+            (outerContext as MainActivity).getWebView().dispatchKeyEvent(event)
+            return true
         }
 
         return super.dispatchKeyEvent(event)
@@ -218,8 +214,8 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 layoutParams.setMargins(16, 16, 16, 16)
                 btn.layoutParams = layoutParams
 
-                btn.setOnClickListener { onCommand("SELECT_TARGET_$firstTarget") }
-                btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$firstTarget") }
+                btn.setOnClickListener { executeFallbackTouch("SELECT_TARGET_$firstTarget") }
+                btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) executeFallbackTouch("HOVER_TARGET_$firstTarget") }
                 targetButtonsContainer.addView(btn)
             } else {
                 for (i in 0 until targets.length()) {
@@ -239,8 +235,8 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                     btn.layoutParams = layoutParams
 
                     // Send target command dynamically
-                    btn.setOnClickListener { onCommand("SELECT_TARGET_$targetIndex") }
-                    btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$targetIndex") }
+                    btn.setOnClickListener { executeFallbackTouch("SELECT_TARGET_$targetIndex") }
+                    btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) executeFallbackTouch("HOVER_TARGET_$targetIndex") }
 
                     targetButtonsContainer.addView(btn)
                 }

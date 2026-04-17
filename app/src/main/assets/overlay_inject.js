@@ -1,7 +1,5 @@
 (function() {
     'use strict';
-    const Key = { UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', A: 'z', B: 'x', START: 'Escape', SELECT: 'Shift' };
-    const KeyCode = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, A: 90, B: 88, START: 27, SELECT: 16 };
     const Command = { FIGHT: 0, BALL: 1, POKEMON: 2, RUN: 3, TERA: 4 };
     const UiMode = { MESSAGE: 0, TITLE: 1, COMMAND: 2, FIGHT: 3, BALL: 4, TARGET_SELECT: 5 };
     const MoveTarget = {
@@ -29,98 +27,75 @@
         return res;
     };
 
-    function fireKeyDown(key, code) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: key, keyCode: code, which: code, bubbles: true }));
-    }
-    function fireKeyUp(key, code) {
-        window.dispatchEvent(new KeyboardEvent('keyup', { key: key, keyCode: code, which: code, bubbles: true }));
-    }
+    window.ThorInject = {
+        executeFallbackTouch: function(command) {
+            if (!window.globalScene || !window.globalScene.ui) return;
+            const commandHandler = window.globalScene.ui.handlers[2]; // COMMAND
+            const fightHandler = window.globalScene.ui.handlers[3]; // FIGHT
+            const targetHandler = window.globalScene.ui.handlers[5]; // TARGET_SELECT
 
-    window.ThorBridge = {
-        execute: function(commandStr) {
-            if (!window.globalScene) return;
+            if (command.startsWith("HOVER_MAIN_")) {
+                const cmd = command.replace("HOVER_MAIN_", "");
+                if (cmd === "FIGHT" && commandHandler) commandHandler.setCursor(0);
+                else if (cmd === "BALL" && commandHandler) commandHandler.setCursor(1);
+                else if (cmd === "POKEMON" && commandHandler) commandHandler.setCursor(2);
+                else if (cmd === "RUN" && commandHandler) commandHandler.setCursor(3);
+                return;
+            }
 
-            try {
-                // 1. Handle Decoupled General Inputs
-                if (commandStr.endsWith("_DOWN")) {
-                    const input = commandStr.replace("INPUT_", "").replace("_DOWN", "");
-                    if (Key[input]) fireKeyDown(Key[input], KeyCode[input]);
+            if (command.startsWith("HOVER_MOVE_")) {
+                const idx = parseInt(command.split('_').pop(), 10);
+                if (!isNaN(idx) && fightHandler) fightHandler.setCursor(idx);
+                return;
+            }
 
-                    // SPECIAL: L1 Bumper Tera Logic
-                    if (input === "L1") {
-                        const ui = window.globalScene.ui;
+            if (command.startsWith("HOVER_TARGET_")) {
+                const idx = parseInt(command.split('_').pop(), 10);
+                if (!isNaN(idx) && targetHandler) targetHandler.setCursor(idx);
+                return;
+            }
 
-                        // Check if we are in the command handler and if it allows Tera
-                        if (ui && ui.handlers && ui.handlers[2] && typeof ui.handlers[2].canTera === 'function') {
-                            if (ui.handlers[2].canTera()) {
-                                let activeIdx = 0;
-
-                                if (typeof ui.handlers[2].activeBattlerIndex === 'number') {
-                                    activeIdx = ui.handlers[2].activeBattlerIndex;
-                                } else if (typeof ui.handlers[2].fieldIndex === 'number') {
-                                    activeIdx = ui.handlers[2].fieldIndex;
-                                } else {
-                                    // Ultimate fallback to Phase Manager
-                                    const phase = window.globalScene.phaseManager.getCurrentPhase();
-                                    if (phase && typeof phase.getFieldIndex === 'function') {
-                                        activeIdx = phase.getFieldIndex();
-                                    }
-                                }
-
-                                ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
-                            }
-                        }
-                    }
-                    return;
+            if (command.startsWith("SELECT_TARGET_")) {
+                const idx = parseInt(command.split('_').pop(), 10);
+                if (!isNaN(idx) && targetHandler && targetHandler.active) {
+                    targetHandler.setCursor(idx);
+                    window.globalScene.ui.processInput(5); // ACTION
                 }
+                return;
+            }
 
-                if (commandStr.endsWith("_UP")) {
-                    const input = commandStr.replace("INPUT_", "").replace("_UP", "");
-                    if (Key[input]) fireKeyUp(Key[input], KeyCode[input]);
-                    return;
-                }
-
-                if (!window.globalScene.ui) return;
-                const ui = window.globalScene.ui;
-
-                if (commandStr === "ACTION_BACK") {
-                    fireKeyDown('x', 88);
-                    setTimeout(() => fireKeyUp('x', 88), 50);
-                    return;
-                }
-
-                // Hover Sync
-                if (commandStr.startsWith("HOVER_MAIN_")) {
-                    const cmd = commandStr.replace("HOVER_MAIN_", "");
-                    if (cmd === "FIGHT") ui.setCursor(0);
-                    else if (cmd === "BALL") ui.setCursor(1);
-                    else if (cmd === "POKEMON") ui.setCursor(2);
-                    else if (cmd === "RUN") ui.setCursor(3);
-                    return;
-                }
-
-                if (commandStr.startsWith("HOVER_MOVE_") || commandStr.startsWith("HOVER_TARGET_")) {
-                    const idx = parseInt(commandStr.split('_').pop(), 10);
-                    if (!isNaN(idx)) ui.setCursor(idx);
-                    return;
-                }
-
-                // Explicit Action Selection
-                if (commandStr.startsWith("SELECT_MOVE_") || commandStr.startsWith("SELECT_TARGET_")) {
-                     const idx = parseInt(commandStr.split('_').pop(), 10);
-                     if (!isNaN(idx)) {
-                         ui.setCursor(idx);
-                         fireKeyDown('z', 90);
-                         setTimeout(() => fireKeyUp('z', 90), 50);
-                     }
-                     return;
-                }
-
-                if (commandStr === "MAIN_FIGHT") { ui.setCursor(0); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_BALL") { ui.setCursor(1); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_POKEMON") { ui.setCursor(2); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-                if (commandStr === "MAIN_RUN") { ui.setCursor(3); fireKeyDown('z', 90); setTimeout(() => fireKeyUp('z', 90), 50); }
-            } catch (e) {}
+            switch (command) {
+                case "MAIN_FIGHT":
+                    if (commandHandler && commandHandler.active) { commandHandler.setCursor(0); window.globalScene.ui.processInput(5); }
+                    break;
+                case "MAIN_BALL":
+                    if (commandHandler && commandHandler.active) { commandHandler.setCursor(1); window.globalScene.ui.processInput(5); }
+                    break;
+                case "MAIN_POKEMON":
+                    if (commandHandler && commandHandler.active) { commandHandler.setCursor(2); window.globalScene.ui.processInput(5); }
+                    break;
+                case "MAIN_RUN":
+                    if (commandHandler && commandHandler.active) { commandHandler.setCursor(3); window.globalScene.ui.processInput(5); }
+                    break;
+                case "MAIN_TERA":
+                    window.globalScene.ui.processInput(14); // CYCLE_TERA
+                    break;
+                case "SELECT_MOVE_0":
+                     if (fightHandler && fightHandler.active) { fightHandler.setCursor(0); window.globalScene.ui.processInput(5); }
+                     break;
+                case "SELECT_MOVE_1":
+                     if (fightHandler && fightHandler.active) { fightHandler.setCursor(1); window.globalScene.ui.processInput(5); }
+                     break;
+                case "SELECT_MOVE_2":
+                     if (fightHandler && fightHandler.active) { fightHandler.setCursor(2); window.globalScene.ui.processInput(5); }
+                     break;
+                case "SELECT_MOVE_3":
+                     if (fightHandler && fightHandler.active) { fightHandler.setCursor(3); window.globalScene.ui.processInput(5); }
+                     break;
+                case "ACTION_BACK":
+                    window.globalScene.ui.processInput(6); // CANCEL
+                    break;
+            }
         }
     };
 
