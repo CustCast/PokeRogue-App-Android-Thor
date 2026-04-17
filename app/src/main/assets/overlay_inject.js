@@ -176,8 +176,9 @@
         }
     };
 
-    const initTeraBypass = () => {
-        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initTeraBypass, 100);
+
+    const initCustomCommandDPad = () => {
+        if (!window.globalScene || !window.globalScene.ui || !window.globalScene.ui.handlers) return setTimeout(initCustomCommandDPad, 100);
 
         const commandHandler = window.globalScene.ui.handlers[2]; // UiMode.COMMAND
         if (!commandHandler) return;
@@ -186,35 +187,51 @@
             const originalProcessInput = commandHandler.processInput;
 
             commandHandler.processInput = function(button) {
-                // Button.LEFT is 4, Button.RIGHT is 5
                 const cursor = this.getCursor();
 
-                if (button === 4) { // LEFT
-                    // If on FIGHT (0) or POKEMON (2) and it tries to go left to TERA, block it
-                    if (cursor === 0 || cursor === 2) {
-                        if (this.canTera && this.canTera()) {
-                           // Play the error sound or just consume it
-                           window.globalScene.ui.playSelect();
-                           return true;
-                        }
+                // Button Enums: UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3
+                if (button >= 0 && button <= 3) {
+                    let newCursor = null;
+                    const canTera = this.canTera && this.canTera();
+
+                    if (cursor === 0) { // Fight
+                        if (button === 0 && canTera) newCursor = 4; // UP -> Tera
+                        if (button === 1) newCursor = 3; // DOWN -> Run
+                        if (button === 2) newCursor = 1; // LEFT -> Bag/Ball
+                        if (button === 3) newCursor = 2; // RIGHT -> Pokemon
                     }
+                    else if (cursor === 1) { // Bag/Ball
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 3) newCursor = 3; // RIGHT -> Run
+                    }
+                    else if (cursor === 3) { // Run
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 2) newCursor = 1; // LEFT -> Bag/Ball
+                        if (button === 3) newCursor = 2; // RIGHT -> Pokemon
+                    }
+                    else if (cursor === 2) { // Pokemon
+                        if (button === 0) newCursor = 0; // UP -> Fight
+                        if (button === 2) newCursor = 3; // LEFT -> Run
+                    }
+                    else if (cursor === 4) { // Tera
+                        if (button === 1) newCursor = 0; // DOWN -> Fight
+                    }
+
+                    // If a valid new cursor position was mapped, update it and consume the input
+                    if (newCursor !== null) {
+                        this.setCursor(newCursor);
+                        window.globalScene.ui.playSelect();
+                    }
+                    return true; // Always consume directional inputs in command menu to block 2x2 grid logic
                 }
 
-                if (button === 5) { // RIGHT
-                     // If cursor is somehow already on TERA (4) and hits right, force it back to FIGHT (0)
-                     if (cursor === 4) {
-                         this.setCursor(0);
-                         window.globalScene.ui.playSelect();
-                         return true;
-                     }
-                }
-
-                // Otherwise, process normally
+                // Action/Cancel or other buttons process normally
                 return originalProcessInput.call(this, button);
             };
             commandHandler._hackedInput = true;
         }
     };
+
 
 
     const initCursorSync = () => {
@@ -245,7 +262,7 @@
     };
 
     initUIHiding();
-    initTeraBypass();
+    initCustomCommandDPad();
     initCursorSync();
 
 
@@ -265,6 +282,7 @@
                      const handler = ui.handlers[UiMode.COMMAND];
                      if (handler && typeof handler.getCursor === 'function') {
                          payloadData.cursor = handler.getCursor();
+                         payloadData.canTera = handler.canTera ? handler.canTera() : false;
                      }
                  } else if (currentMode === UiMode.FIGHT) {
                      stateStr = "FIGHT_MENU";
