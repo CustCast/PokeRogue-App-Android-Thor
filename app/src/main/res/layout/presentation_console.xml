@@ -26,91 +26,69 @@
         </FrameLayout>
 
         <!-- Child 1: MAIN_MENU -->
-        <LinearLayout
+        <GridLayout
             android:id="@+id/layoutMainMenu"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:columnCount="2"
+            android:rowCount="2">
 
-            <!-- Row 1: Tera Button -->
-            <Button
-                android:id="@+id/btnMainTera"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:background="@drawable/retro_button_border"
-                android:text="TERA"
-                android:textColor="#33FF33"
-                android:textSize="24sp"
-                android:paddingLeft="32dp"
-                android:paddingRight="32dp"
-                android:visibility="gone"
-                android:backgroundTint="@null" />
-
-            <!-- Row 2: Big Fight Button -->
             <Button
                 android:id="@+id/btnMainFight"
                 style="?android:attr/borderlessButtonStyle"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_margin="16dp"
+                android:layout_rowWeight="1"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
                 android:background="@drawable/retro_button_border"
                 android:text="FIGHT"
                 android:textColor="#33FF33"
-                android:textSize="48sp"
-                android:textStyle="bold"
+                android:textSize="24sp"
                 android:backgroundTint="@null" />
 
-            <!-- Row 3: Bottom action row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_margin="8dp">
+            <Button
+                android:id="@+id/btnMainBall"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_rowWeight="1"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                android:background="@drawable/retro_button_border"
+                android:text="BALL"
+                android:textColor="#33FF33"
+                android:textSize="24sp"
+                android:backgroundTint="@null" />
 
-                <Button
-                    android:id="@+id/btnMainBall"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/retro_button_border"
-                    android:text="BAG"
-                    android:textColor="#33FF33"
-                    android:textSize="24sp"
-                    android:backgroundTint="@null" />
+            <Button
+                android:id="@+id/btnMainPokemon"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_rowWeight="1"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                android:background="@drawable/retro_button_border"
+                android:text="POKEMON"
+                android:textColor="#33FF33"
+                android:textSize="24sp"
+                android:backgroundTint="@null" />
 
-                <Button
-                    android:id="@+id/btnMainRun"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/retro_button_border"
-                    android:text="RUN"
-                    android:textColor="#33FF33"
-                    android:textSize="24sp"
-                    android:backgroundTint="@null" />
-
-                <Button
-                    android:id="@+id/btnMainPokemon"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/retro_button_border"
-                    android:text="POKEMON"
-                    android:textColor="#33FF33"
-                    android:textSize="24sp"
-                    android:backgroundTint="@null" />
-            </LinearLayout>
-        </LinearLayout>
+            <Button
+                android:id="@+id/btnMainRun"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_rowWeight="1"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                android:background="@drawable/retro_button_border"
+                android:text="RUN"
+                android:textColor="#33FF33"
+                android:textSize="24sp"
+                android:backgroundTint="@null" />
+        </GridLayout>
 
         <!-- Child 2: FIGHT_MENU -->
         <LinearLayout

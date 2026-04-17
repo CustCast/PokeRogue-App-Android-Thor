@@ -20,7 +20,6 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     private lateinit var layoutFightMenu: View
     private lateinit var layoutTargetSelect: View
 
-    private lateinit var btnMainTera: Button
     private lateinit var btnMainFight: Button
     private lateinit var btnMainBall: Button
     private lateinit var btnMainPokemon: Button
@@ -52,7 +51,6 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         layoutFightMenu = findViewById(R.id.layoutFightMenu)
         layoutTargetSelect = findViewById(R.id.layoutTargetSelect)
 
-        btnMainTera = findViewById(R.id.btnMainTera)
         btnMainFight = findViewById(R.id.btnMainFight)
         btnMainBall = findViewById(R.id.btnMainBall)
         btnMainPokemon = findViewById(R.id.btnMainPokemon)
@@ -72,7 +70,6 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
     }
 
     private fun setupListeners() {
-        btnMainTera.setOnClickListener { onCommand("MAIN_TERA") }
         btnMainFight.setOnClickListener { onCommand("MAIN_FIGHT") }
         btnMainBall.setOnClickListener { onCommand("MAIN_BALL") }
         btnMainPokemon.setOnClickListener { onCommand("MAIN_POKEMON") }
@@ -137,19 +134,10 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
 
                 // Sync visual state from game engine cursor
                 val cursor = data?.optInt("cursor", -1) ?: -1
-                val canTera = data?.optBoolean("canTera", false) ?: false
-
-                if (canTera) {
-                    btnMainTera.visibility = View.VISIBLE
-                } else {
-                    btnMainTera.visibility = View.GONE
-                }
-
                 setButtonActive(btnMainFight, cursor == 0 || cursor == -1)
                 setButtonActive(btnMainBall, cursor == 1)
                 setButtonActive(btnMainPokemon, cursor == 2)
                 setButtonActive(btnMainRun, cursor == 3)
-                setButtonActive(btnMainTera, cursor == 4)
             }
             "FIGHT_MENU" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
@@ -198,6 +186,8 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
         targetButtonsContainer.removeAllViews()
 
         if (targets != null && targets.length() > 0) {
+            val firstTarget = targets.getInt(0)
+
             val isFoeAoe = targetType == "ALL_NEAR_ENEMIES" || targetType == "ALL_ENEMIES" || targetType == "ENEMY_SIDE"
             val isFriendlyFireAoe = targetType == "ALL_NEAR_OTHERS" || targetType == "ALL" || targetType == "BOTH_SIDES"
 
@@ -216,10 +206,8 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                 layoutParams.setMargins(16, 16, 16, 16)
                 btn.layoutParams = layoutParams
 
-                // For AOE, it selects index 0 of the targets list
-                val firstTarget = targets.getInt(0)
                 btn.setOnClickListener { onCommand("SELECT_TARGET_$firstTarget") }
-
+                btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$firstTarget") }
                 targetButtonsContainer.addView(btn)
             } else {
                 for (i in 0 until targets.length()) {
@@ -238,7 +226,9 @@ class ConsolePresentation(outerContext: Context, display: Display, private val o
                     layoutParams.setMargins(16, 16, 16, 16)
                     btn.layoutParams = layoutParams
 
+                    // Send target command dynamically
                     btn.setOnClickListener { onCommand("SELECT_TARGET_$targetIndex") }
+                    btn.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) onCommand("HOVER_TARGET_$targetIndex") }
 
                     targetButtonsContainer.addView(btn)
                 }
