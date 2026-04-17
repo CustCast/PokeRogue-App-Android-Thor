@@ -3,6 +3,7 @@
 
 
     // Native PokeRogue Button Enums
+
     const ButtonEnum = {
         UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3,
         SELECT: 4, A: 5, B: 6, START: 7,
@@ -11,21 +12,82 @@
         SPEED_UP: 15, SLOW_DOWN: 16
     };
 
-    // Emit directly to PokeRogue's inputController
-    function fireInput(buttonValue, isDown) {
-        if (!window.globalScene || !window.globalScene.inputController) return;
 
-        const eventName = isDown ? 'input_down' : 'input_up';
+    function getKeyCodeForButton(buttonEnumValue) {
+        // Fallback defaults for boot screen or if inputController crashes
+        const defaultMap = {
+            0: { key: 'ArrowUp', keyCode: 38 },
+            1: { key: 'ArrowDown', keyCode: 40 },
+            2: { key: 'ArrowLeft', keyCode: 37 },
+            3: { key: 'ArrowRight', keyCode: 39 },
+            4: { key: 'Enter', keyCode: 13 },
+            5: { key: 'z', keyCode: 90 },
+            6: { key: 'x', keyCode: 88 },
+            7: { key: 'Escape', keyCode: 27 },
+            14: { key: 'r', keyCode: 82 } // Default Tera key
+        };
 
         try {
-            window.globalScene.inputController.events.emit(eventName, {
-                controller_type: 'gamepad',
-                button: buttonValue
-            });
+            if (!window.globalScene || !window.globalScene.inputController) {
+                return defaultMap[buttonEnumValue] || null;
+            }
+
+            const config = window.globalScene.inputController.configs["default"];
+            if (!config) return defaultMap[buttonEnumValue] || null;
+
+            const activeMapping = config.custom || config.default;
+
+            let mappedKeyString = null;
+            for (const [keyLabel, boundButtonValue] of Object.entries(activeMapping)) {
+                if (boundButtonValue === buttonEnumValue) {
+                    mappedKeyString = keyLabel;
+                    break;
+                }
+            }
+
+            if (!mappedKeyString) return defaultMap[buttonEnumValue] || null;
+
+            const keyCode = config.mapping[mappedKeyString] ?? null;
+            if (keyCode === null) return defaultMap[buttonEnumValue] || null;
+
+            return { key: getEventKeyStr(keyCode), keyCode: keyCode };
         } catch (e) {
-            console.error("Failed to emit to inputController", e);
+            console.error("Error finding keyCode for button:", e);
+            return defaultMap[buttonEnumValue] || null;
         }
     }
+
+    function getEventKeyStr(keyCode) {
+        const specialKeys = {
+            38: 'ArrowUp', 40: 'ArrowDown', 37: 'ArrowLeft', 39: 'ArrowRight',
+            13: 'Enter', 27: 'Escape', 16: 'Shift', 32: ' '
+        };
+        return specialKeys[keyCode] || String.fromCharCode(keyCode).toLowerCase();
+    }
+
+
+    function fireKeyDown(key, code) {
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+            key: key,
+            code: key,
+            keyCode: code,
+            which: code,
+            bubbles: true,
+            cancelable: true
+        }));
+    }
+
+    function fireKeyUp(key, code) {
+        document.dispatchEvent(new KeyboardEvent('keyup', {
+            key: key,
+            code: key,
+            keyCode: code,
+            which: code,
+            bubbles: true,
+            cancelable: true
+        }));
+    }
+
 
 
     const Command = { FIGHT: 0, BALL: 1, POKEMON: 2, RUN: 3, TERA: 4 };
@@ -70,20 +132,27 @@
                 // 1. Handle Decoupled General Inputs
 
 
+
+
                 if (commandStr.endsWith("_DOWN")) {
                     const input = commandStr.replace("INPUT_", "").replace("_DOWN", "");
 
-                    if (input === "L1") {
-                        // Native toggle using Cycle Tera Type (14)
-                        fireInput(ButtonEnum.CYCLE_TERA_TYPE, true);
-                        return;
-                    }
+                    let buttonEnumToUse = undefined;
+                    if (input === "L1") buttonEnumToUse = ButtonEnum.CYCLE_TERA_TYPE;
+                    else if (ButtonEnum[input] !== undefined) buttonEnumToUse = ButtonEnum[input];
 
-                    if (ButtonEnum[input] !== undefined) {
-                        fireInput(ButtonEnum[input], true);
+                    if (buttonEnumToUse !== undefined) {
+                        const keyObj = getKeyCodeForButton(buttonEnumToUse);
+                        if (keyObj !== null) {
+                            fireKeyDown(keyObj.key, keyObj.keyCode);
+                        }
                     }
                     return;
                 }
+
+
+
+
 
 
 
@@ -91,16 +160,22 @@
                 if (commandStr.endsWith("_UP")) {
                     const input = commandStr.replace("INPUT_", "").replace("_UP", "");
 
-                    if (input === "L1") {
-                        fireInput(ButtonEnum.CYCLE_TERA_TYPE, false);
-                        return;
-                    }
+                    let buttonEnumToUse = undefined;
+                    if (input === "L1") buttonEnumToUse = ButtonEnum.CYCLE_TERA_TYPE;
+                    else if (ButtonEnum[input] !== undefined) buttonEnumToUse = ButtonEnum[input];
 
-                    if (ButtonEnum[input] !== undefined) {
-                        fireInput(ButtonEnum[input], false);
+                    if (buttonEnumToUse !== undefined) {
+                        const keyObj = getKeyCodeForButton(buttonEnumToUse);
+                        if (keyObj !== null) {
+                            fireKeyUp(keyObj.key, keyObj.keyCode);
+                        }
                     }
                     return;
                 }
+
+
+
+
 
 
 
@@ -110,8 +185,11 @@
                 const ui = window.globalScene.ui;
 
                 if (commandStr === "ACTION_BACK") {
-                    fireInput(ButtonEnum.B, true);
-                    setTimeout(() => fireInput(ButtonEnum.B, false), 50);
+                    const keyObj = getKeyCodeForButton(ButtonEnum.B);
+                    if (keyObj !== null) {
+                        fireKeyDown(keyObj.key, keyObj.keyCode);
+                        setTimeout(() => fireKeyUp(keyObj.key, keyObj.keyCode), 50);
+                    }
                     return;
                 }
 
@@ -120,16 +198,22 @@
                      const idx = parseInt(commandStr.split('_').pop(), 10);
                      if (!isNaN(idx)) {
                          ui.setCursor(idx);
-                         fireInput(ButtonEnum.A, true);
-                         setTimeout(() => fireInput(ButtonEnum.A, false), 50);
+                         const keyObj = getKeyCodeForButton(ButtonEnum.A);
+                         if (keyObj !== null) {
+                             fireKeyDown(keyObj.key, keyObj.keyCode);
+                             setTimeout(() => fireKeyUp(keyObj.key, keyObj.keyCode), 50);
+                         }
                      }
                      return;
                 }
 
                 const handleMainTouch = (idx) => {
                     ui.setCursor(idx);
-                    fireInput(ButtonEnum.A, true);
-                    setTimeout(() => fireInput(ButtonEnum.A, false), 50);
+                    const keyObj = getKeyCodeForButton(ButtonEnum.A);
+                    if (keyObj !== null) {
+                        fireKeyDown(keyObj.key, keyObj.keyCode);
+                        setTimeout(() => fireKeyUp(keyObj.key, keyObj.keyCode), 50);
+                    }
                 };
 
                 if (commandStr === "MAIN_FIGHT") { handleMainTouch(0); }
@@ -137,6 +221,8 @@
                 if (commandStr === "MAIN_POKEMON") { handleMainTouch(2); }
                 if (commandStr === "MAIN_RUN") { handleMainTouch(3); }
                 if (commandStr === "MAIN_TERA") { handleMainTouch(4); }
+
+
 
             } catch (e) {}
         }
