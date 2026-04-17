@@ -24,7 +24,8 @@
             5: { key: 'z', keyCode: 90 },
             6: { key: 'x', keyCode: 88 },
             7: { key: 'Escape', keyCode: 27 },
-            14: { key: 'r', keyCode: 82 } // Default Tera key
+            14: { key: 'r', keyCode: 82 },
+            8: { key: 'c', keyCode: 67 } // Default Stats key
         };
 
         try {
@@ -117,12 +118,7 @@
         return res;
     };
 
-    function fireKeyDown(key, code) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: key, keyCode: code, which: code, bubbles: true }));
-    }
-    function fireKeyUp(key, code) {
-        window.dispatchEvent(new KeyboardEvent('keyup', { key: key, keyCode: code, which: code, bubbles: true }));
-    }
+
 
     window.ThorBridge = {
         execute: function(commandStr) {
@@ -139,6 +135,7 @@
 
                     let buttonEnumToUse = undefined;
                     if (input === "L1") buttonEnumToUse = ButtonEnum.CYCLE_TERA_TYPE;
+                    else if (input === "SELECT") buttonEnumToUse = ButtonEnum.STATS;
                     else if (ButtonEnum[input] !== undefined) buttonEnumToUse = ButtonEnum[input];
 
                     if (buttonEnumToUse !== undefined) {
@@ -162,6 +159,7 @@
 
                     let buttonEnumToUse = undefined;
                     if (input === "L1") buttonEnumToUse = ButtonEnum.CYCLE_TERA_TYPE;
+                    else if (input === "SELECT") buttonEnumToUse = ButtonEnum.STATS;
                     else if (ButtonEnum[input] !== undefined) buttonEnumToUse = ButtonEnum[input];
 
                     if (buttonEnumToUse !== undefined) {
