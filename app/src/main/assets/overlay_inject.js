@@ -1,38 +1,32 @@
 (function() {
     'use strict';
 
-    const ButtonEnum = { UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3, SELECT: 4, A: 5, B: 6, START: 7 };
 
-    function getKeyCodeForButton(buttonEnumValue) {
-        if (!window.globalScene || !window.globalScene.inputController) return null;
+    // Native PokeRogue Button Enums
+    const ButtonEnum = {
+        UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3,
+        SELECT: 4, A: 5, B: 6, START: 7,
+        STATS: 8, CYCLE_SHINY: 9, CYCLE_FORM: 10, CYCLE_GENDER: 11,
+        CYCLE_ABILITY: 12, CYCLE_NATURE: 13, CYCLE_TERA_TYPE: 14,
+        SPEED_UP: 15, SLOW_DOWN: 16
+    };
 
-        // Get the active configuration for the keyboard (PokeRogue stores the active keyboard profile as 'default')
-        const config = window.globalScene.inputController.configs["default"];
-        if (!config) return null;
+    // Emit directly to PokeRogue's inputController
+    function fireInput(buttonValue, isDown) {
+        if (!window.globalScene || !window.globalScene.inputController) return;
 
-        // Use custom user binds first, fallback to game defaults
-        const activeMapping = config.custom || config.default;
+        const eventName = isDown ? 'input_down' : 'input_up';
 
-        // Reverse lookup: Find the KEY_ string (e.g., "KEY_Z") that maps to the requested Button
-        let mappedKeyString = null;
-        for (const [keyLabel, boundButtonValue] of Object.entries(activeMapping)) {
-            if (boundButtonValue === buttonEnumValue) {
-                mappedKeyString = keyLabel;
-                break;
-            }
+        try {
+            window.globalScene.inputController.events.emit(eventName, {
+                controller_type: 'gamepad',
+                button: buttonValue
+            });
+        } catch (e) {
+            console.error("Failed to emit to inputController", e);
         }
-
-        if (!mappedKeyString) return null;
-
-        // Finally, lookup the exact keyCode integer from the config's mapping dictionary
-        return config.mapping[mappedKeyString] ?? null;
     }
 
-    function getEventKeyStr(keyCode) {
-        // A minimal mapping back to strings for fireKeyDown if needed, though most games only strictly check keyCode.
-        // PokeRogue's raw input system relies heavily on Phaser's KeyCode enum.
-        return String.fromCharCode(keyCode);
-    }
 
     const Command = { FIGHT: 0, BALL: 1, POKEMON: 2, RUN: 3, TERA: 4 };
     const UiMode = { MESSAGE: 0, TITLE: 1, COMMAND: 2, FIGHT: 3, BALL: 4, TARGET_SELECT: 5 };
@@ -75,57 +69,40 @@
             try {
                 // 1. Handle Decoupled General Inputs
 
+
                 if (commandStr.endsWith("_DOWN")) {
                     const input = commandStr.replace("INPUT_", "").replace("_DOWN", "");
 
-                    if (ButtonEnum[input] !== undefined) {
-                        const keyCode = getKeyCodeForButton(ButtonEnum[input]);
-                        if (keyCode !== null) {
-                            fireKeyDown(getEventKeyStr(keyCode), keyCode);
-                        }
+                    if (input === "L1") {
+                        // Native toggle using Cycle Tera Type (14)
+                        fireInput(ButtonEnum.CYCLE_TERA_TYPE, true);
+                        return;
                     }
 
-                    // SPECIAL: L1 Bumper Tera Logic
-
-                    if (input === "L1") {
-                        const ui = window.globalScene.ui;
-
-                        // Check if we are in the command handler and if it allows Tera
-                        if (ui && ui.handlers && ui.handlers[2] && typeof ui.handlers[2].canTera === 'function') {
-                            if (ui.handlers[2].canTera()) {
-                                let activeIdx = 0;
-
-                                if (typeof ui.handlers[2].activeBattlerIndex === 'number') {
-                                    activeIdx = ui.handlers[2].activeBattlerIndex;
-                                } else if (typeof ui.handlers[2].fieldIndex === 'number') {
-                                    activeIdx = ui.handlers[2].fieldIndex;
-                                } else {
-                                    // Ultimate fallback to Phase Manager
-                                    const phase = window.globalScene.phaseManager.getCurrentPhase();
-                                    if (phase && typeof phase.getFieldIndex === 'function') {
-                                        activeIdx = phase.getFieldIndex();
-                                    }
-                                }
-
-                                ui.setMode(3, activeIdx, 4); // 3=UiMode.FIGHT, 4=Command.TERA
-                            }
-                        }
+                    if (ButtonEnum[input] !== undefined) {
+                        fireInput(ButtonEnum[input], true);
                     }
                     return;
                 }
+
+
 
 
                 if (commandStr.endsWith("_UP")) {
                     const input = commandStr.replace("INPUT_", "").replace("_UP", "");
 
+                    if (input === "L1") {
+                        fireInput(ButtonEnum.CYCLE_TERA_TYPE, false);
+                        return;
+                    }
+
                     if (ButtonEnum[input] !== undefined) {
-                        const keyCode = getKeyCodeForButton(ButtonEnum[input]);
-                        if (keyCode !== null) {
-                            fireKeyUp(getEventKeyStr(keyCode), keyCode);
-                        }
+                        fireInput(ButtonEnum[input], false);
                     }
                     return;
                 }
+
+
 
 
 
@@ -133,11 +110,8 @@
                 const ui = window.globalScene.ui;
 
                 if (commandStr === "ACTION_BACK") {
-                    const keyCode = getKeyCodeForButton(ButtonEnum.B);
-                    if (keyCode !== null) {
-                        fireKeyDown(getEventKeyStr(keyCode), keyCode);
-                        setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
-                    }
+                    fireInput(ButtonEnum.B, true);
+                    setTimeout(() => fireInput(ButtonEnum.B, false), 50);
                     return;
                 }
 
@@ -146,22 +120,16 @@
                      const idx = parseInt(commandStr.split('_').pop(), 10);
                      if (!isNaN(idx)) {
                          ui.setCursor(idx);
-                         const keyCode = getKeyCodeForButton(ButtonEnum.A);
-                         if (keyCode !== null) {
-                             fireKeyDown(getEventKeyStr(keyCode), keyCode);
-                             setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
-                         }
+                         fireInput(ButtonEnum.A, true);
+                         setTimeout(() => fireInput(ButtonEnum.A, false), 50);
                      }
                      return;
                 }
 
                 const handleMainTouch = (idx) => {
                     ui.setCursor(idx);
-                    const keyCode = getKeyCodeForButton(ButtonEnum.A);
-                    if (keyCode !== null) {
-                        fireKeyDown(getEventKeyStr(keyCode), keyCode);
-                        setTimeout(() => fireKeyUp(getEventKeyStr(keyCode), keyCode), 50);
-                    }
+                    fireInput(ButtonEnum.A, true);
+                    setTimeout(() => fireInput(ButtonEnum.A, false), 50);
                 };
 
                 if (commandStr === "MAIN_FIGHT") { handleMainTouch(0); }
@@ -169,6 +137,7 @@
                 if (commandStr === "MAIN_POKEMON") { handleMainTouch(2); }
                 if (commandStr === "MAIN_RUN") { handleMainTouch(3); }
                 if (commandStr === "MAIN_TERA") { handleMainTouch(4); }
+
             } catch (e) {}
         }
     };
@@ -297,6 +266,93 @@
             };
             fightHandler._hackedCursor = true;
         }
+    };
+
+
+    let lastPayloadStr = "";
+
+    const syncState = () => {
+        if (!window.globalScene || !window.globalScene.ui) return;
+        try {
+            let stateStr = "BUSY";
+            let payloadData = {};
+            const ui = window.globalScene.ui;
+            const currentMode = ui.getMode();
+
+            if (!ui.overlayActive) {
+                 if (currentMode === UiMode.COMMAND) {
+                     stateStr = "MAIN_MENU";
+                     const handler = ui.handlers[UiMode.COMMAND];
+                     if (handler && typeof handler.getCursor === 'function') {
+                         payloadData.cursor = handler.getCursor();
+                         payloadData.canTera = handler.canTera ? handler.canTera() : false;
+                     }
+                 } else if (currentMode === UiMode.FIGHT) {
+                     stateStr = "FIGHT_MENU";
+                     const handler = ui.handlers[UiMode.FIGHT];
+                     if (handler && typeof handler.getCursor === 'function') {
+                         payloadData.cursor = handler.getCursor();
+                     }
+                     if (typeof window.globalScene.getPlayerField === 'function') {
+                         const field = window.globalScene.getPlayerField();
+                         if (field && field.length > 0) {
+                             const active = getActivePokemon(ui, field);
+                             if (active && (active.getMoveset || active.moveset)) {
+                                 const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
+                                 if (moveset) {
+                                     payloadData.moves = [];
+                                     for (let i = 0; i < 4; i++) {
+                                         const mObj = moveset[i];
+                                         if (mObj && mObj.moveId !== 0) {
+                                             const move = mObj.getMove ? mObj.getMove() : null;
+                                             const name = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
+                                             const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
+                                             const ppUsed = mObj.ppUsed || 0;
+                                             payloadData.moves.push({ index: i, name: name, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
+                                         }
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 } else if (currentMode === UiMode.TARGET_SELECT) {
+                     stateStr = "TARGET_SELECT";
+                     const handler = ui.handlers[UiMode.TARGET_SELECT];
+                     if (handler && handler.targets) {
+                         payloadData.targets = handler.targets;
+                         if (typeof window.globalScene.getPlayerField === 'function') {
+                             const field = window.globalScene.getPlayerField();
+                             if (field && field.length > 0) {
+                                 const active = getActivePokemon(ui, field);
+                                 if (active && handler.move !== undefined) {
+                                     const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
+                                     if (moveset) {
+                                         for (let i = 0; i < moveset.length; i++) {
+                                             const mObj = moveset[i];
+                                             if (mObj && mObj.moveId === handler.move) {
+                                                 const move = mObj.getMove ? mObj.getMove() : null;
+                                                 payloadData.moveName = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
+                                                 if (move && move.moveTarget !== undefined) {
+                                                     payloadData.targetType = MoveTarget[move.moveTarget] || move.moveTarget.toString();
+                                                 }
+                                                 break;
+                                             }
+                                         }
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 }
+            }
+            const payloadStr = JSON.stringify({ state: stateStr, data: payloadData });
+            if (payloadStr !== lastPayloadStr) {
+                lastPayloadStr = payloadStr;
+                if (window.AndroidInterface && typeof window.AndroidInterface.onStateChanged === 'function') {
+                    window.AndroidInterface.onStateChanged(payloadStr);
+                }
+            }
+        } catch (e) {}
     };
 
     initUIHiding();
