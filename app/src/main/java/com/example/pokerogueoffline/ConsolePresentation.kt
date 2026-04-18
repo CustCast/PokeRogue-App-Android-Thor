@@ -207,23 +207,17 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     }
 
     private fun updateCursorAttachment(btn: View) {
-        // Delay execution until layout pass is fully measured
-        if (btn.width == 0 || btn.height == 0) {
-            btn.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    btn.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    if (activeCursorView == btn) return // prevent double setup if another event triggered
-                    updateCursorAttachment(btn)
-                }
-            })
-            return
-        }
-
         // Ensure UI thread execution for view measurements
         btn.post {
             // Get screen coordinates of the button
             val location = IntArray(2)
             btn.getLocationOnScreen(location)
+
+            // If the ViewFlipper hasn't fully attached the view yet, wait and try again
+            if (location[0] == 0 && location[1] == 0 && (btn.width > 0 || btn.height > 0)) {
+                btn.postDelayed({ updateCursorAttachment(btn) }, 50)
+                return@post
+            }
 
             // Get screen coordinates of the overlay (to calculate relative offset if needed)
             val overlayLocation = IntArray(2)
@@ -239,8 +233,11 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
             ivCursorTopLeft.y = baseTopLeftY
             ivCursorTopLeft.visibility = View.VISIBLE
 
+            // The cursor images are 80x80px. Because they are initially GONE, their .width and .height are 0 on the first layout pass.
+            val cursorSize = 80f
+
             // Top Right corner (button width - cursor width)
-            baseTopRightX = relativeX.toFloat() + btn.width - ivCursorTopRight.width
+            baseTopRightX = relativeX.toFloat() + btn.width - cursorSize
             baseTopRightY = relativeY.toFloat()
             ivCursorTopRight.x = baseTopRightX
             ivCursorTopRight.y = baseTopRightY
@@ -248,14 +245,14 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
 
             // Bottom Left corner (button height - cursor height)
             baseBottomLeftX = relativeX.toFloat()
-            baseBottomLeftY = relativeY.toFloat() + btn.height - ivCursorBottomLeft.height
+            baseBottomLeftY = relativeY.toFloat() + btn.height - cursorSize
             ivCursorBottomLeft.x = baseBottomLeftX
             ivCursorBottomLeft.y = baseBottomLeftY
             ivCursorBottomLeft.visibility = View.VISIBLE
 
             // Bottom Right corner
-            baseBottomRightX = relativeX.toFloat() + btn.width - ivCursorBottomRight.width
-            baseBottomRightY = relativeY.toFloat() + btn.height - ivCursorBottomRight.height
+            baseBottomRightX = relativeX.toFloat() + btn.width - cursorSize
+            baseBottomRightY = relativeY.toFloat() + btn.height - cursorSize
             ivCursorBottomRight.x = baseBottomRightX
             ivCursorBottomRight.y = baseBottomRightY
             ivCursorBottomRight.visibility = View.VISIBLE

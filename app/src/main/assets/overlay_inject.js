@@ -268,15 +268,15 @@
                          // Trigger global scene UI to process cancel directly,
                          // bypassing the current fight handler's strict cursor bounds
                          if (window.globalScene && window.globalScene.ui) {
-                             window.globalScene.ui.processInput(5); // 5 is Cancel
+                             window.globalScene.ui.processInput(6); // 6 is Cancel/Back internally for UI
                              return true;
                          }
-                         return originalFightProcessInput.call(this, 5); // Fallback
+                         return originalFightProcessInput.call(this, 6); // Fallback
                      }
                 }
 
-                // If user presses physical CANCEL button (5), ensure we reset custom cursor
-                if (button === 5) {
+                // If user presses physical CANCEL button (5 or 6), ensure we reset custom cursor
+                if (button === 5 || button === 6) {
                     this._customCursor = null;
                 }
 
