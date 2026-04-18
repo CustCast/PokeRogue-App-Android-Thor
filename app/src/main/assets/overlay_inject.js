@@ -207,60 +207,74 @@
             const originalFightProcessInput = fightHandler.processInput;
 
             fightHandler.processInput = function(button) {
-                const cursor = this.getCursor();
+                // Determine our actual cursor. Phaser engine getCursor() clamps to max moves length, so we use our own tracker for indices 4/5.
+                const cursor = (this._customCursor !== undefined && this._customCursor !== null) ? this._customCursor : this.getCursor();
 
                 if (button >= 0 && button <= 3) {
                     let newCursor = null;
-                    // Note: Tera capability is checked on the command handler globally, but we can verify active pokemon here if needed.
-                    // For safety, we use the commandHandler's canTera state if available, or just fallback to generic tera checking.
                     const canTera = (window.globalScene.ui.handlers[2] && window.globalScene.ui.handlers[2].canTera)
                         ? window.globalScene.ui.handlers[2].canTera()
                         : false;
 
-                    if (cursor === 2) { // Move 2 (Bottom Left)
+                    if (cursor === 2) { // Move 2
                         if (button === 1 && canTera) newCursor = 4; // DOWN -> Tera
+                        // Since Back is to the right of Tera, DOWN from Move 3 should ideally go to Back (cursor 5)
                     }
-                    else if (cursor === 3) { // Move 3 (Bottom Right)
-                        if (button === 1) { // DOWN -> Back (Cancel)
-                            window.globalScene.ui.playSelect();
-                            return originalFightProcessInput.call(this, 5);
-                        }
+                    else if (cursor === 3) { // Move 3
+                        if (button === 1) newCursor = 5; // DOWN -> Back
                     }
                     else if (cursor === 4) { // Tera
                         if (button === 0) newCursor = 2; // UP -> Move 2
-                        if (button === 3) {
-                             // RIGHT -> Back (Cancel)
-                             window.globalScene.ui.playSelect();
-                             // Send cancel button (5) to back out of fight menu
-                             return originalFightProcessInput.call(this, 5);
-                        }
+                        if (button === 3) newCursor = 5; // RIGHT -> Back
+                    }
+                    else if (cursor === 5) { // Back
+                        if (button === 0) newCursor = 3; // UP -> Move 3
+                        if (button === 2 && canTera) newCursor = 4; // LEFT -> Tera
                     }
 
                     if (newCursor !== null) {
-                        this.setCursor(newCursor);
                         window.globalScene.ui.playSelect();
+                        if (newCursor >= 4) {
+                            // Highlighting our custom buttons outside standard engine bounds
+                            this._customCursor = newCursor;
+                            if (typeof syncState === 'function') syncState();
+                        } else {
+                            // Back to standard engine bounds
+                            this._customCursor = null;
+                            this.setCursor(newCursor);
+                        }
                         return true;
                     }
 
-                    if (cursor === 4) {
-                        return true; // Consume other inputs when Tera is focused so we don't accidentally select moves
+                    // Consume inputs if we are focused on custom buttons so they don't break underlying grid
+                    if (cursor >= 4) {
+                        return true;
                     }
                 }
 
-                // If button is ACTION (4) and cursor is Tera (4), we need to handle Terastallize action and reset cursor.
-                if (button === 4 && cursor === 4) {
-                     window.globalScene.ui.playSelect();
-                     // Trigger tera toggle (usually it's a D-pad/Shoulder button internally, but we'll map it to the R shoulder button (7))
-                     // Or just explicitly call the commandHandler's tera logic.
-                     if (window.globalScene.ui.handlers[2] && typeof window.globalScene.ui.handlers[2].terastallize === 'function') {
-                         window.globalScene.ui.handlers[2].terastallize();
-                     } else {
-                         // Fallback: send R button to engine
-                         originalFightProcessInput.call(this, 7);
+                if (button === 4) { // ACTION button
+                     if (cursor === 4) {
+                         window.globalScene.ui.playSelect();
+                         if (window.globalScene.ui.handlers[2] && typeof window.globalScene.ui.handlers[2].terastallize === 'function') {
+                             window.globalScene.ui.handlers[2].terastallize();
+                         } else {
+                             originalFightProcessInput.call(this, 7);
+                         }
+                         return true;
+                     } else if (cursor === 5) {
+                         // User explicitly confirms BACK button
+                         window.globalScene.ui.playSelect();
+                         this._customCursor = null; // Clear cursor state when exiting
+                         return originalFightProcessInput.call(this, 5); // 5 is the internal Cancel button
                      }
-                     return true;
                 }
 
+                // If user presses physical CANCEL button (5), ensure we reset custom cursor
+                if (button === 5) {
+                    this._customCursor = null;
+                }
+
+                // Normal process for standard moves
                 return originalFightProcessInput.call(this, button);
             };
             fightHandler._hackedInput = true;
@@ -324,7 +338,9 @@
                      const handler = ui.handlers[UiMode.FIGHT];
                      const commandHandler = ui.handlers[UiMode.COMMAND];
                      if (handler && typeof handler.getCursor === 'function') {
-                         payloadData.cursor = handler.getCursor();
+                         payloadData.cursor = (handler._customCursor !== undefined && handler._customCursor !== null)
+                             ? handler._customCursor
+                             : handler.getCursor();
                      }
                      if (commandHandler) {
                          payloadData.canTera = commandHandler.canTera ? commandHandler.canTera() : false;

@@ -220,6 +220,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 setButtonActive(btnMove2, cursor == 2)
                 setButtonActive(btnMove3, cursor == 3)
                 setButtonActive(btnMainTera, cursor == 4)
+                setButtonActive(btnFightBack, cursor == 5)
             }
             "TARGET_SELECT" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutTargetSelect)
