@@ -71,6 +71,28 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         btnTargetBack = findViewById(R.id.btnTargetBack)
 
         setupListeners()
+        applyCustomFont()
+    }
+
+    private fun applyCustomFont() {
+        try {
+            val typeface = android.graphics.Typeface.createFromAsset(outerContext.assets, "font/bw.otf")
+            val root = findViewById<android.view.ViewGroup>(android.R.id.content)
+            applyFontToViews(root, typeface)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun applyFontToViews(view: android.view.View, typeface: android.graphics.Typeface) {
+        if (view is android.widget.TextView) {
+            view.typeface = typeface
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                applyFontToViews(view.getChildAt(i), typeface)
+            }
+        }
     }
 
     private fun executeFallbackTouch(command: String) {
@@ -125,9 +147,10 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     }
 
     private fun setButtonActive(btn: Button, isActive: Boolean) {
-        // If it's a move button, the background is handled dynamically in updateFightMenu
+        // If it's a move button or main menu button with a specific background, we don't want to overwrite the background drawable
         // We only change the visual active state (e.g. text color or alpha)
-        if (btn == btnMove0 || btn == btnMove1 || btn == btnMove2 || btn == btnMove3) {
+        if (btn == btnMove0 || btn == btnMove1 || btn == btnMove2 || btn == btnMove3 ||
+            btn == btnMainFight || btn == btnMainBall || btn == btnMainPokemon || btn == btnMainRun) {
             if (isActive) {
                 btn.alpha = 1.0f
                 btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
@@ -136,6 +159,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 btn.setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
             }
         } else {
+            // For standard buttons like Tera, Back, etc.
             if (isActive) {
                 btn.setBackgroundResource(R.drawable.retro_button_border_focused)
                 btn.setTextColor(android.graphics.Color.parseColor("#000000"))
@@ -158,6 +182,31 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
 
                 // Sync visual state from game engine cursor
                 val cursor = data?.optInt("cursor", -1) ?: -1
+
+                setButtonActive(btnMainFight, cursor == 0 || cursor == -1)
+                setButtonActive(btnMainBall, cursor == 1)
+                setButtonActive(btnMainPokemon, cursor == 2)
+                setButtonActive(btnMainRun, cursor == 3)
+
+                // Set the specific main menu backgrounds. They might be dropped in dynamically, so we fetch their IDs safely.
+                val fightId = outerContext.resources.getIdentifier("main_fight_btn", "drawable", outerContext.packageName)
+                if (fightId != 0) btnMainFight.setBackgroundResource(fightId)
+
+                val ballId = outerContext.resources.getIdentifier("main_ball_btn", "drawable", outerContext.packageName)
+                if (ballId != 0) btnMainBall.setBackgroundResource(ballId)
+
+                val pokemonId = outerContext.resources.getIdentifier("main_pokemon_btn", "drawable", outerContext.packageName)
+                if (pokemonId != 0) btnMainPokemon.setBackgroundResource(pokemonId)
+
+                val runId = outerContext.resources.getIdentifier("main_run_btn", "drawable", outerContext.packageName)
+                if (runId != 0) btnMainRun.setBackgroundResource(runId)
+            }
+            "FIGHT_MENU" -> {
+                viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
+                updateFightMenu(data)
+
+                // Sync visual state from game engine cursor
+                val cursor = data?.optInt("cursor", -1) ?: -1
                 val canTera = data?.optBoolean("canTera", false) ?: false
 
                 if (canTera) {
@@ -166,22 +215,11 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                     btnMainTera.visibility = View.GONE
                 }
 
-                setButtonActive(btnMainFight, cursor == 0 || cursor == -1)
-                setButtonActive(btnMainBall, cursor == 1)
-                setButtonActive(btnMainPokemon, cursor == 2)
-                setButtonActive(btnMainRun, cursor == 3)
-                setButtonActive(btnMainTera, cursor == 4)
-            }
-            "FIGHT_MENU" -> {
-                viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutFightMenu)
-                updateFightMenu(data)
-
-                // Sync visual state from game engine cursor
-                val cursor = data?.optInt("cursor", -1) ?: -1
                 setButtonActive(btnMove0, cursor == 0 || cursor == -1)
                 setButtonActive(btnMove1, cursor == 1)
                 setButtonActive(btnMove2, cursor == 2)
                 setButtonActive(btnMove3, cursor == 3)
+                setButtonActive(btnMainTera, cursor == 4)
             }
             "TARGET_SELECT" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutTargetSelect)
