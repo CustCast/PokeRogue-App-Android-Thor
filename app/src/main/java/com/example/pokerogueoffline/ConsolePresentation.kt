@@ -82,8 +82,8 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 ivCursorBottomRight.x = baseBottomRightX - offset
                 ivCursorBottomRight.y = baseBottomRightY - offset
 
-                // Loop every 300ms
-                cursorHandler.postDelayed(this, 300)
+                // Loop every 200ms
+                cursorHandler.postDelayed(this, 200)
             }
         }
     }
@@ -207,6 +207,18 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     }
 
     private fun updateCursorAttachment(btn: View) {
+        // Delay execution until layout pass is fully measured
+        if (btn.width == 0 || btn.height == 0) {
+            btn.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    btn.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    if (activeCursorView == btn) return // prevent double setup if another event triggered
+                    updateCursorAttachment(btn)
+                }
+            })
+            return
+        }
+
         // Ensure UI thread execution for view measurements
         btn.post {
             // Get screen coordinates of the button
