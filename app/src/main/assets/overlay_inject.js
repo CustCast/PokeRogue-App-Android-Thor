@@ -265,7 +265,13 @@
                          // User explicitly confirms BACK button
                          window.globalScene.ui.playSelect();
                          this._customCursor = null; // Clear cursor state when exiting
-                         return originalFightProcessInput.call(this, 5); // 5 is the internal Cancel button
+                         // Trigger global scene UI to process cancel directly,
+                         // bypassing the current fight handler's strict cursor bounds
+                         if (window.globalScene && window.globalScene.ui) {
+                             window.globalScene.ui.processInput(5); // 5 is Cancel
+                             return true;
+                         }
+                         return originalFightProcessInput.call(this, 5); // Fallback
                      }
                 }
 
