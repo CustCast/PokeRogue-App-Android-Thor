@@ -125,12 +125,24 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     }
 
     private fun setButtonActive(btn: Button, isActive: Boolean) {
-        if (isActive) {
-            btn.setBackgroundResource(R.drawable.retro_button_border_focused)
-            btn.setTextColor(android.graphics.Color.parseColor("#000000"))
+        // If it's a move button, the background is handled dynamically in updateFightMenu
+        // We only change the visual active state (e.g. text color or alpha)
+        if (btn == btnMove0 || btn == btnMove1 || btn == btnMove2 || btn == btnMove3) {
+            if (isActive) {
+                btn.alpha = 1.0f
+                btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+            } else {
+                btn.alpha = 0.7f
+                btn.setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+            }
         } else {
-            btn.setBackgroundResource(R.drawable.retro_button_border)
-            btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+            if (isActive) {
+                btn.setBackgroundResource(R.drawable.retro_button_border_focused)
+                btn.setTextColor(android.graphics.Color.parseColor("#000000"))
+            } else {
+                btn.setBackgroundResource(R.drawable.retro_button_border)
+                btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+            }
         }
     }
 
@@ -190,8 +202,21 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 val name = moveObj.optString("name", "Unknown")
                 val pp = moveObj.optInt("pp", 0)
                 val maxPp = moveObj.optInt("maxPp", 0)
+                val type = moveObj.optInt("type", 0)
+
                 btn.text = "$name\nPP: $pp/$maxPp"
                 btn.visibility = View.VISIBLE
+
+                // Android resource filenames cannot start with a number. Use a prefix.
+                // Replace hyphens with underscores if the type is negative (e.g. -1 for unknown)
+                val typeString = type.toString().replace("-", "_")
+                val resName = "type_${typeString}_btn"
+                val resId = outerContext.resources.getIdentifier(resName, "drawable", outerContext.packageName)
+                if (resId != 0) {
+                    btn.setBackgroundResource(resId)
+                } else {
+                    btn.setBackgroundResource(R.drawable.retro_button_border)
+                }
             } else {
                 btn.visibility = View.INVISIBLE
             }

@@ -280,7 +280,8 @@
                                              const name = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
                                              const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
                                              const ppUsed = mObj.ppUsed || 0;
-                                             payloadData.moves.push({ index: i, name: name, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
+                                             const type = move ? move.type : 0;
+                                             payloadData.moves.push({ index: i, name: name, type: type, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
                                          }
                                      }
                                  }
