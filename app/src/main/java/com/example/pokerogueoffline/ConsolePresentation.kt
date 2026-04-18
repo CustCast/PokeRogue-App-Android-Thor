@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.ViewFlipper
@@ -38,7 +39,54 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private lateinit var targetButtonsContainer: LinearLayout
     private lateinit var btnTargetBack: Button
 
+    private lateinit var cursorOverlay: FrameLayout
+    private lateinit var ivCursorTopLeft: android.widget.ImageView
+    private lateinit var ivCursorTopRight: android.widget.ImageView
+    private lateinit var ivCursorBottomLeft: android.widget.ImageView
+    private lateinit var ivCursorBottomRight: android.widget.ImageView
+
     private var currentState: String = "BUSY"
+    private var activeCursorView: View? = null
+    private val cursorHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var cursorAnimStep = 0
+
+    // Store base coordinates for animations
+    private var baseTopLeftX = 0f
+    private var baseTopLeftY = 0f
+    private var baseTopRightX = 0f
+    private var baseTopRightY = 0f
+    private var baseBottomLeftX = 0f
+    private var baseBottomLeftY = 0f
+    private var baseBottomRightX = 0f
+    private var baseBottomRightY = 0f
+
+    private val cursorRunnable = object : Runnable {
+        override fun run() {
+            if (activeCursorView != null && cursorOverlay.visibility == View.VISIBLE) {
+                // Update step: 0 -> 1 -> 2 -> 0...
+                cursorAnimStep = (cursorAnimStep + 1) % 3
+
+                // Calculate pixel offset (2px per step inwards)
+                val offset = cursorAnimStep * 2f
+
+                // Apply offsets directly inwards toward the center of the button based on original coords
+                ivCursorTopLeft.x = baseTopLeftX + offset
+                ivCursorTopLeft.y = baseTopLeftY + offset
+
+                ivCursorTopRight.x = baseTopRightX - offset
+                ivCursorTopRight.y = baseTopRightY + offset
+
+                ivCursorBottomLeft.x = baseBottomLeftX + offset
+                ivCursorBottomLeft.y = baseBottomLeftY - offset
+
+                ivCursorBottomRight.x = baseBottomRightX - offset
+                ivCursorBottomRight.y = baseBottomRightY - offset
+
+                // Loop every 300ms
+                cursorHandler.postDelayed(this, 300)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +117,12 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         tvTargetHeader = findViewById(R.id.tvTargetHeader)
         targetButtonsContainer = findViewById(R.id.targetButtonsContainer)
         btnTargetBack = findViewById(R.id.btnTargetBack)
+
+        cursorOverlay = findViewById(R.id.cursorOverlay)
+        ivCursorTopLeft = findViewById(R.id.ivCursorTopLeft)
+        ivCursorTopRight = findViewById(R.id.ivCursorTopRight)
+        ivCursorBottomLeft = findViewById(R.id.ivCursorBottomLeft)
+        ivCursorBottomRight = findViewById(R.id.ivCursorBottomRight)
 
         setupListeners()
         applyCustomFont()
@@ -146,7 +200,71 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         return super.dispatchKeyEvent(event)
     }
 
+    private fun hideCursors() {
+        cursorOverlay.visibility = View.GONE
+        activeCursorView = null
+        cursorHandler.removeCallbacks(cursorRunnable)
+    }
+
+    private fun updateCursorAttachment(btn: View) {
+        // Ensure UI thread execution for view measurements
+        btn.post {
+            // Get screen coordinates of the button
+            val location = IntArray(2)
+            btn.getLocationOnScreen(location)
+
+            // Get screen coordinates of the overlay (to calculate relative offset if needed)
+            val overlayLocation = IntArray(2)
+            cursorOverlay.getLocationOnScreen(overlayLocation)
+
+            val relativeX = location[0] - overlayLocation[0]
+            val relativeY = location[1] - overlayLocation[1]
+
+            // Top Left corner
+            baseTopLeftX = relativeX.toFloat()
+            baseTopLeftY = relativeY.toFloat()
+            ivCursorTopLeft.x = baseTopLeftX
+            ivCursorTopLeft.y = baseTopLeftY
+            ivCursorTopLeft.visibility = View.VISIBLE
+
+            // Top Right corner (button width - cursor width)
+            baseTopRightX = relativeX.toFloat() + btn.width - ivCursorTopRight.width
+            baseTopRightY = relativeY.toFloat()
+            ivCursorTopRight.x = baseTopRightX
+            ivCursorTopRight.y = baseTopRightY
+            ivCursorTopRight.visibility = View.VISIBLE
+
+            // Bottom Left corner (button height - cursor height)
+            baseBottomLeftX = relativeX.toFloat()
+            baseBottomLeftY = relativeY.toFloat() + btn.height - ivCursorBottomLeft.height
+            ivCursorBottomLeft.x = baseBottomLeftX
+            ivCursorBottomLeft.y = baseBottomLeftY
+            ivCursorBottomLeft.visibility = View.VISIBLE
+
+            // Bottom Right corner
+            baseBottomRightX = relativeX.toFloat() + btn.width - ivCursorBottomRight.width
+            baseBottomRightY = relativeY.toFloat() + btn.height - ivCursorBottomRight.height
+            ivCursorBottomRight.x = baseBottomRightX
+            ivCursorBottomRight.y = baseBottomRightY
+            ivCursorBottomRight.visibility = View.VISIBLE
+
+            cursorOverlay.visibility = View.VISIBLE
+
+            // Start animation loop if not running
+            if (activeCursorView != btn) {
+                activeCursorView = btn
+                cursorAnimStep = 0
+                cursorHandler.removeCallbacks(cursorRunnable)
+                cursorHandler.post(cursorRunnable)
+            }
+        }
+    }
+
     private fun setButtonActive(btn: Button, isActive: Boolean) {
+        if (isActive) {
+            updateCursorAttachment(btn)
+        }
+
         // If it's a move button or main menu button with a specific background, we don't want to overwrite the background drawable
         // We only change the visual active state (e.g. text color or alpha)
         if (btn == btnMove0 || btn == btnMove1 || btn == btnMove2 || btn == btnMove3 ||
@@ -175,6 +293,10 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         val state = json.optString("state", "BUSY")
         currentState = state
         val data = json.optJSONObject("data")
+
+        if (state != "MAIN_MENU" && state != "FIGHT_MENU") {
+            hideCursors()
+        }
 
         when (state) {
             "MAIN_MENU" -> {

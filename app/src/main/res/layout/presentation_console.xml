@@ -224,4 +224,42 @@
 
     </ViewFlipper>
 
+    <!-- Overlay for animated cursors -->
+    <FrameLayout
+        android:id="@+id/cursorOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="10dp"
+        android:focusable="false"
+        android:clickable="false">
+
+        <ImageView
+            android:id="@+id/ivCursorTopLeft"
+            android:layout_width="80px"
+            android:layout_height="80px"
+            android:src="@drawable/seltopleft"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/ivCursorTopRight"
+            android:layout_width="80px"
+            android:layout_height="80px"
+            android:src="@drawable/seltopright"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/ivCursorBottomLeft"
+            android:layout_width="80px"
+            android:layout_height="80px"
+            android:src="@drawable/selbottomleft"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/ivCursorBottomRight"
+            android:layout_width="80px"
+            android:layout_height="80px"
+            android:src="@drawable/selbottomright"
+            android:visibility="gone" />
+    </FrameLayout>
+
 </FrameLayout>
