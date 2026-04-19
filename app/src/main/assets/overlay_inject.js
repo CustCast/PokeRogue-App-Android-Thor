@@ -242,7 +242,7 @@
                     }
                 }
 
-                if (button === 4) { // ACTION button
+                if (button === 5) { // ACTION button (Enum 5 in PokeRogue)
                      if (cursor === 4) {
                          window.globalScene.ui.playSelect();
                          if (window.globalScene.ui.handlers[2] && typeof window.globalScene.ui.handlers[2].terastallize === 'function') {
@@ -265,8 +265,8 @@
                      }
                 }
 
-                // If user presses physical CANCEL button (5 or 6), ensure we reset custom cursor
-                if (button === 5 || button === 6) {
+                // If user presses physical CANCEL button (Enum 6), ensure we reset custom cursor
+                if (button === 6) {
                     this._customCursor = null;
                 }
 
