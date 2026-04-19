@@ -138,16 +138,6 @@
                     fightHandler.movesContainer._hackedAlpha = true;
                 }
             }
-
-            // Hides the move info (PP, accuracy, power box)
-            if (fightHandler.moveInfoOverlay) {
-                fightHandler.moveInfoOverlay.setAlpha(0);
-                if (!fightHandler.moveInfoOverlay._hackedAlpha) {
-                    const origInfoAlpha = fightHandler.moveInfoOverlay.setAlpha;
-                    fightHandler.moveInfoOverlay.setAlpha = function() { return origInfoAlpha.call(this, 0); };
-                    fightHandler.moveInfoOverlay._hackedAlpha = true;
-                }
-            }
         }
     };
 
@@ -324,6 +314,80 @@
     initCustomCommandDPad();
     initCursorSync();
 
+    const forceMoveDescriptions = () => {
+        if (!window.globalScene || !window.globalScene.ui) return setTimeout(forceMoveDescriptions, 100);
+
+        const fightHandler = window.globalScene.ui.handlers[3]; // UiMode.FIGHT
+        if (!fightHandler || !fightHandler.moveInfoOverlay) return;
+
+        // 1. Force it visible when the Fight menu opens
+        if (!fightHandler._hackedShowOverlay) {
+            const originalShow = fightHandler.show;
+            fightHandler.show = function(args) {
+                const result = originalShow.call(this, args);
+                // Force the internal toggle state to "visible" immediately
+                this.toggleInfo(true);
+                return result;
+            };
+            fightHandler._hackedShowOverlay = true;
+        }
+
+        // 2. Prevent the game engine from ever hiding it
+        if (!fightHandler._hackedToggleInfo) {
+            fightHandler.toggleInfo = function(visible) {
+                // We ignore the `visible` parameter and always force it to true!
+
+                // Hide the move names (since we are showing info)
+                if (this.movesContainer) {
+                    this.movesContainer.setVisible(false).setAlpha(0);
+                }
+
+                // Force the description overlay to be fully opaque and visible
+                if (this.moveInfoOverlay) {
+                    this.moveInfoOverlay.setVisible(true);
+                    if (this.moveInfoOverlay.desc) {
+                        this.moveInfoOverlay.desc.setAlpha(1);
+                    }
+                }
+            };
+            fightHandler._hackedToggleInfo = true;
+        }
+    };
+
+    const hideFightMenuCursor = () => {
+        if (!window.globalScene || !window.globalScene.ui) return setTimeout(hideFightMenuCursor, 100);
+
+        const fightHandler = window.globalScene.ui.handlers[3]; // UiMode.FIGHT
+        if (!fightHandler) return;
+
+        if (!fightHandler._hackedHideCursorObj) {
+            const origFightSetCursor = fightHandler.setCursor;
+            fightHandler.setCursor = function(cursorIndex) {
+                // Let the engine update the internal state and create the cursor object if needed
+                const result = origFightSetCursor.call(this, cursorIndex);
+
+                // Force the cursor sprite to be invisible
+                if (this.cursorObj) {
+                    this.cursorObj.setAlpha(0);
+
+                    // Prevent Phaser tweens from resetting it
+                    if (!this.cursorObj._hackedAlpha) {
+                        const origCursorAlpha = this.cursorObj.setAlpha;
+                        this.cursorObj.setAlpha = function() {
+                            return origCursorAlpha.call(this, 0);
+                        };
+                        this.cursorObj._hackedAlpha = true;
+                    }
+                }
+
+                return result;
+            };
+            fightHandler._hackedHideCursorObj = true;
+        }
+    };
+
+    forceMoveDescriptions();
+    hideFightMenuCursor();
 
     let lastPayloadStr = "";
 
