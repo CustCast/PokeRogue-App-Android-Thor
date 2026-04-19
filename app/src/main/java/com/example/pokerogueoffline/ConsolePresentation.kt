@@ -2,6 +2,10 @@ package com.example.pokerogueoffline
 
 import android.app.Presentation
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Bundle
 import android.view.Display
 import android.view.InputDevice
@@ -18,6 +22,7 @@ import org.json.JSONObject
 class ConsolePresentation(private val outerContext: Context, display: Display) : Presentation(outerContext, display) {
 
     private lateinit var viewFlipper: ViewFlipper
+    private lateinit var tvBattery: TextView
     private lateinit var layoutBusy: View
     private lateinit var layoutMainMenu: View
     private lateinit var layoutFightMenu: View
@@ -144,8 +149,38 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         ivCursorBottomLeft = findViewById(R.id.ivCursorBottomLeft)
         ivCursorBottomRight = findViewById(R.id.ivCursorBottomRight)
 
+        tvBattery = findViewById(R.id.tvBattery)
+
         setupListeners()
         applyCustomFont()
+    }
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level != -1 && scale != -1) {
+                    val batteryPct = (level * 100 / scale.toFloat()).toInt()
+                    tvBattery.text = "$batteryPct%"
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        outerContext.registerReceiver(batteryReceiver, filter)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            outerContext.unregisterReceiver(batteryReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun applyCustomFont() {
