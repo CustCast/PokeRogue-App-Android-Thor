@@ -814,10 +814,15 @@ class MainActivity : AppCompatActivity() {
             isWebViewPaused = false
         	webView.loadUrl("javascript:this.Phaser.Display.Canvas.CanvasPool.pool[1].parent.scene.resumeBgm()");
         }
+        if (startScreenLayout.visibility == View.GONE && consolePresentation == null) {
+            setupSecondaryDisplay()
+        }
     }
 
     override fun onStop() {
         CookieManager.getInstance().flush();
+        consolePresentation?.dismiss()
+        consolePresentation = null
         super.onStop()
     }
 
