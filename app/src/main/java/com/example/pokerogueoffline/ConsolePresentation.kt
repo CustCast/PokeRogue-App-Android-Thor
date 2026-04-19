@@ -434,7 +434,17 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutTargetSelect)
                 updateTargetSelect(data)
             }
-            else -> viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutBusy)
+            else -> {
+                viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutBusy)
+
+                // Dynamically apply standby background if asset exists
+                val standbyBtnId = outerContext.resources.getIdentifier("standby_bg", "drawable", outerContext.packageName)
+                if (standbyBtnId != 0) {
+                    layoutBusy.setBackgroundResource(standbyBtnId)
+                } else {
+                    layoutBusy.setBackgroundColor(android.graphics.Color.BLACK)
+                }
+            }
         }
     }
 
