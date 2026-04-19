@@ -82,7 +82,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
-                android:layout_marginTop="-70px"
+                android:layout_marginTop="-170px"
                 android:columnCount="2"
                 android:rowCount="2">
 
@@ -237,17 +237,12 @@
             <Button
                 android:id="@+id/btnFightBack"
                 style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="360px"
+                android:layout_height="198px"
                 android:layout_alignParentBottom="true"
                 android:layout_alignParentEnd="true"
-                android:layout_margin="16dp"
-                android:paddingLeft="32dp"
-                android:paddingRight="32dp"
-                android:background="@drawable/retro_button_border"
-                android:text="BACK"
-                android:textColor="#33FF33"
-                android:textSize="24sp"
+                android:layout_marginBottom="10px"
+                android:layout_marginEnd="10px"
                 android:backgroundTint="@null" />
         </RelativeLayout>
 

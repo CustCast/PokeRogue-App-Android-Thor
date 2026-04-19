@@ -329,10 +329,10 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
             updateCursorAttachment(btn)
         }
 
-        // If it's a move button or main menu button with a specific background, we don't want to overwrite the background drawable
+        // If it's a move button or main menu/fight back button with a specific background, we don't want to overwrite the background drawable
         // We only change the visual active state (e.g. text color or alpha)
         if (btn == btnMove0 || btn == btnMove1 || btn == btnMove2 || btn == btnMove3 ||
-            btn == btnMainFight || btn == btnMainBall || btn == btnMainPokemon || btn == btnMainRun) {
+            btn == btnMainFight || btn == btnMainBall || btn == btnMainPokemon || btn == btnMainRun || btn == btnFightBack) {
             if (isActive) {
                 btn.alpha = 1.0f
                 if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
@@ -421,6 +421,14 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 setButtonActive(btnMove3, cursor == 3)
                 setButtonActive(btnMainTera, cursor == 4)
                 setButtonActive(btnFightBack, cursor == 5)
+
+                // Dynamically apply back button background if asset exists
+                val backBtnId = outerContext.resources.getIdentifier("back_btn", "drawable", outerContext.packageName)
+                if (backBtnId != 0) {
+                    btnFightBack.setBackgroundResource(backBtnId)
+                } else {
+                    btnFightBack.setBackgroundResource(R.drawable.retro_button_border)
+                }
             }
             "TARGET_SELECT" -> {
                 viewFlipper.displayedChild = viewFlipper.indexOfChild(layoutTargetSelect)
