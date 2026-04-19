@@ -131,6 +131,13 @@ class MainActivity : AppCompatActivity() {
         webView.settings.allowFileAccess = true
         webView.settings.mediaPlaybackRequiresUserGesture = false
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            webView.defaultFocusHighlightEnabled = false
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.foreground = null
+        }
+
         webView.setDownloadListener(CustomDownloadListener())
 
         webView.addJavascriptInterface(AndroidInterface(this) { payload ->
@@ -228,6 +235,7 @@ class MainActivity : AppCompatActivity() {
                 startLocalServer(applicationContext)
                 withContext(Dispatchers.Main) {
                     startScreenLayout.visibility = View.GONE
+                    if (consolePresentation == null) setupSecondaryDisplay()
                 }
             }
         }
@@ -237,6 +245,7 @@ class MainActivity : AppCompatActivity() {
                 startOnline(applicationContext)
                 withContext(Dispatchers.Main) {
                     startScreenLayout.visibility = View.GONE
+                    if (consolePresentation == null) setupSecondaryDisplay()
                 }
             }
         }
@@ -769,6 +778,7 @@ class MainActivity : AppCompatActivity() {
                 // For example, start online play and hide the start screen
                 startOnline(applicationContext)
                 startScreenLayout.visibility = View.GONE
+                if (consolePresentation == null) setupSecondaryDisplay()
             }
             2 -> {
                 // Action for the second button (playButton)
@@ -776,6 +786,7 @@ class MainActivity : AppCompatActivity() {
                 if (playButton.isEnabled) {
                     startLocalServer(applicationContext)
                     startScreenLayout.visibility = View.GONE
+                    if (consolePresentation == null) setupSecondaryDisplay()
                 }
                 else
                 {
