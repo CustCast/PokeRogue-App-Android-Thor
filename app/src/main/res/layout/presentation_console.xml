@@ -36,9 +36,9 @@
                 android:id="@+id/btnMainFight"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="1240px"
-                android:layout_height="800px"
+                android:layout_height="783px"
                 android:layout_centerHorizontal="true"
-                android:layout_marginTop="43px"
+                android:layout_marginTop="60px"
                 android:backgroundTint="@null" />
 
             <Button
@@ -85,53 +85,125 @@
                 android:columnCount="2"
                 android:rowCount="2">
 
-                <Button
+                <RelativeLayout
                     android:id="@+id/btnMove0"
-                    style="?android:attr/borderlessButtonStyle"
                     android:layout_width="571px"
                     android:layout_height="199px"
                     android:layout_margin="8dp"
                     android:background="@drawable/retro_button_border"
-                    android:text="-"
-                    android:textColor="#33FF33"
-                    android:textSize="20sp"
-                    android:backgroundTint="@null" />
+                    android:clickable="true"
+                    android:focusable="true">
+                    <TextView
+                        android:id="@+id/tvMove0Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:textColor="#33FF33"
+                        android:textSize="26sp"
+                        android:text="-" />
+                    <TextView
+                        android:id="@+id/tvMove0Pp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvMove0Name"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:layout_marginStart="5px"
+                        android:textColor="#33FF33"
+                        android:textSize="24sp"
+                        android:text="PP: 0/0" />
+                </RelativeLayout>
 
-                <Button
+                <RelativeLayout
                     android:id="@+id/btnMove1"
-                    style="?android:attr/borderlessButtonStyle"
                     android:layout_width="571px"
                     android:layout_height="199px"
                     android:layout_margin="8dp"
                     android:background="@drawable/retro_button_border"
-                    android:text="-"
-                    android:textColor="#33FF33"
-                    android:textSize="20sp"
-                    android:backgroundTint="@null" />
+                    android:clickable="true"
+                    android:focusable="true">
+                    <TextView
+                        android:id="@+id/tvMove1Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:textColor="#33FF33"
+                        android:textSize="26sp"
+                        android:text="-" />
+                    <TextView
+                        android:id="@+id/tvMove1Pp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvMove1Name"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:layout_marginStart="5px"
+                        android:textColor="#33FF33"
+                        android:textSize="24sp"
+                        android:text="PP: 0/0" />
+                </RelativeLayout>
 
-                <Button
+                <RelativeLayout
                     android:id="@+id/btnMove2"
-                    style="?android:attr/borderlessButtonStyle"
                     android:layout_width="571px"
                     android:layout_height="199px"
                     android:layout_margin="8dp"
                     android:background="@drawable/retro_button_border"
-                    android:text="-"
-                    android:textColor="#33FF33"
-                    android:textSize="20sp"
-                    android:backgroundTint="@null" />
+                    android:clickable="true"
+                    android:focusable="true">
+                    <TextView
+                        android:id="@+id/tvMove2Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:textColor="#33FF33"
+                        android:textSize="26sp"
+                        android:text="-" />
+                    <TextView
+                        android:id="@+id/tvMove2Pp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvMove2Name"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:layout_marginStart="5px"
+                        android:textColor="#33FF33"
+                        android:textSize="24sp"
+                        android:text="PP: 0/0" />
+                </RelativeLayout>
 
-                <Button
+                <RelativeLayout
                     android:id="@+id/btnMove3"
-                    style="?android:attr/borderlessButtonStyle"
                     android:layout_width="571px"
                     android:layout_height="199px"
                     android:layout_margin="8dp"
                     android:background="@drawable/retro_button_border"
-                    android:text="-"
-                    android:textColor="#33FF33"
-                    android:textSize="20sp"
-                    android:backgroundTint="@null" />
+                    android:clickable="true"
+                    android:focusable="true">
+                    <TextView
+                        android:id="@+id/tvMove3Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:textColor="#33FF33"
+                        android:textSize="26sp"
+                        android:text="-" />
+                    <TextView
+                        android:id="@+id/tvMove3Pp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvMove3Name"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginTop="20px"
+                        android:layout_marginStart="5px"
+                        android:textColor="#33FF33"
+                        android:textSize="24sp"
+                        android:text="PP: 0/0" />
+                </RelativeLayout>
             </GridLayout>
 
             <Button
@@ -219,8 +291,8 @@
         android:id="@+id/textClock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_margin="16dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="16dp"
         android:textColor="#FFFFFF"
         android:textSize="24sp"
         android:format12Hour="h:mm a"
