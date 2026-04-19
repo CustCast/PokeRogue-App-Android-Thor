@@ -306,9 +306,16 @@
         }
     };
 
+    const injectCSSFixes = () => {
+        const style = document.createElement('style');
+        style.innerHTML = '* { outline: none !important; -webkit-tap-highlight-color: transparent !important; }';
+        document.head.appendChild(style);
+    };
+
     initUIHiding();
     initCustomCommandDPad();
     initCursorSync();
+    injectCSSFixes();
 
     const forceMoveDescriptions = () => {
         if (!window.globalScene || !window.globalScene.ui) return setTimeout(forceMoveDescriptions, 100);
