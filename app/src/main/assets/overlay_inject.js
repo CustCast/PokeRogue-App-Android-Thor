@@ -352,6 +352,25 @@
             };
             fightHandler._hackedToggleInfo = true;
         }
+
+        // 3. Patch the MoveInfoOverlay instance directly so it doesn't hide itself
+        if (fightHandler.moveInfoOverlay && !fightHandler.moveInfoOverlay._hackedToggle) {
+            const origOverlayToggle = fightHandler.moveInfoOverlay.toggleInfo;
+            fightHandler.moveInfoOverlay.toggleInfo = function(visible) {
+                // Always force visible to true
+                origOverlayToggle.call(this, true);
+                // Hard-lock the alpha so tweens don't hide it
+                if (this.desc && !this.desc._hackedAlphaLock) {
+                    const origDescAlpha = this.desc.setAlpha;
+                    this.desc.setAlpha = function() {
+                        return origDescAlpha.call(this, 1);
+                    };
+                    this.desc._hackedAlphaLock = true;
+                    this.desc.setAlpha(1);
+                }
+            };
+            fightHandler.moveInfoOverlay._hackedToggle = true;
+        }
     };
 
     const hideFightMenuCursor = () => {
