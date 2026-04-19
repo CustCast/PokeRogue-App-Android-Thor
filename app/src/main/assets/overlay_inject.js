@@ -266,9 +266,13 @@
                          window.globalScene.ui.playSelect();
                          this._customCursor = null; // Clear cursor state when exiting
                          // Trigger global scene UI to process cancel directly,
-                         // bypassing the current fight handler's strict cursor bounds
+                         // bypassing the current fight handler's strict cursor bounds.
+                         // Wrap in setTimeout to ensure the current synchronous input pass
+                         // (pressing Action/4) finishes evaluating before we force a Cancel.
                          if (window.globalScene && window.globalScene.ui) {
-                             window.globalScene.ui.processInput(6); // 6 is Cancel/Back internally for UI
+                             setTimeout(() => {
+                                 window.globalScene.ui.processInput(6); // 6 is Cancel/Back internally for UI
+                             }, 20);
                              return true;
                          }
                          return originalFightProcessInput.call(this, 6); // Fallback

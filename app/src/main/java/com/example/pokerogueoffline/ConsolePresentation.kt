@@ -29,10 +29,20 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private lateinit var btnMainPokemon: Button
     private lateinit var btnMainRun: Button
 
-    private lateinit var btnMove0: Button
-    private lateinit var btnMove1: Button
-    private lateinit var btnMove2: Button
-    private lateinit var btnMove3: Button
+    private lateinit var btnMove0: android.widget.RelativeLayout
+    private lateinit var btnMove1: android.widget.RelativeLayout
+    private lateinit var btnMove2: android.widget.RelativeLayout
+    private lateinit var btnMove3: android.widget.RelativeLayout
+
+    private lateinit var tvMove0Name: TextView
+    private lateinit var tvMove0Pp: TextView
+    private lateinit var tvMove1Name: TextView
+    private lateinit var tvMove1Pp: TextView
+    private lateinit var tvMove2Name: TextView
+    private lateinit var tvMove2Pp: TextView
+    private lateinit var tvMove3Name: TextView
+    private lateinit var tvMove3Pp: TextView
+
     private lateinit var btnFightBack: Button
 
     private lateinit var tvTargetHeader: TextView
@@ -112,6 +122,16 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         btnMove1 = findViewById(R.id.btnMove1)
         btnMove2 = findViewById(R.id.btnMove2)
         btnMove3 = findViewById(R.id.btnMove3)
+
+        tvMove0Name = findViewById(R.id.tvMove0Name)
+        tvMove0Pp = findViewById(R.id.tvMove0Pp)
+        tvMove1Name = findViewById(R.id.tvMove1Name)
+        tvMove1Pp = findViewById(R.id.tvMove1Pp)
+        tvMove2Name = findViewById(R.id.tvMove2Name)
+        tvMove2Pp = findViewById(R.id.tvMove2Pp)
+        tvMove3Name = findViewById(R.id.tvMove3Name)
+        tvMove3Pp = findViewById(R.id.tvMove3Pp)
+
         btnFightBack = findViewById(R.id.btnFightBack)
 
         tvTargetHeader = findViewById(R.id.tvTargetHeader)
@@ -269,7 +289,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         }
     }
 
-    private fun setButtonActive(btn: Button, isActive: Boolean) {
+    private fun setButtonActive(btn: View, isActive: Boolean) {
         if (isActive) {
             updateCursorAttachment(btn)
         }
@@ -280,19 +300,33 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
             btn == btnMainFight || btn == btnMainBall || btn == btnMainPokemon || btn == btnMainRun) {
             if (isActive) {
                 btn.alpha = 1.0f
-                btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                // Also update text color for child text views if it's a layout
+                if (btn is android.view.ViewGroup) {
+                    for (i in 0 until btn.childCount) {
+                        val child = btn.getChildAt(i)
+                        if (child is TextView) child.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+                    }
+                }
             } else {
                 btn.alpha = 0.7f
-                btn.setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+                // Also update text color for child text views if it's a layout
+                if (btn is android.view.ViewGroup) {
+                    for (i in 0 until btn.childCount) {
+                        val child = btn.getChildAt(i)
+                        if (child is TextView) child.setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+                    }
+                }
             }
         } else {
             // For standard buttons like Tera, Back, etc.
             if (isActive) {
                 btn.setBackgroundResource(R.drawable.retro_button_border_focused)
-                btn.setTextColor(android.graphics.Color.parseColor("#000000"))
+                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#000000"))
             } else {
                 btn.setBackgroundResource(R.drawable.retro_button_border)
-                btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
             }
         }
     }
@@ -364,9 +398,14 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private fun updateFightMenu(data: JSONObject?) {
         val moves = data?.optJSONArray("moves")
         val buttons = listOf(btnMove0, btnMove1, btnMove2, btnMove3)
+        val nameViews = listOf(tvMove0Name, tvMove1Name, tvMove2Name, tvMove3Name)
+        val ppViews = listOf(tvMove0Pp, tvMove1Pp, tvMove2Pp, tvMove3Pp)
 
         for (i in buttons.indices) {
             val btn = buttons[i]
+            val tvName = nameViews[i]
+            val tvPp = ppViews[i]
+
             if (moves != null && i < moves.length()) {
                 val moveObj = moves.getJSONObject(i)
                 val name = moveObj.optString("name", "Unknown")
@@ -374,7 +413,9 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 val maxPp = moveObj.optInt("maxPp", 0)
                 val type = moveObj.optInt("type", 0)
 
-                btn.text = "$name\nPP: $pp/$maxPp"
+                tvName.text = name
+                tvPp.text = "PP: $pp/$maxPp"
+
                 btn.visibility = View.VISIBLE
 
                 // Android resource filenames cannot start with a number. Use a prefix.
