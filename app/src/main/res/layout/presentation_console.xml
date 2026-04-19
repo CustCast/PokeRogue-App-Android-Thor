@@ -89,8 +89,11 @@
                 <RelativeLayout
                     android:id="@+id/btnMove0"
                     android:layout_width="571px"
-                    android:layout_height="199px"
-                    android:layout_margin="8dp"
+                    android:layout_height="239px"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
@@ -118,8 +121,11 @@
                 <RelativeLayout
                     android:id="@+id/btnMove1"
                     android:layout_width="571px"
-                    android:layout_height="199px"
-                    android:layout_margin="8dp"
+                    android:layout_height="239px"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
@@ -147,8 +153,11 @@
                 <RelativeLayout
                     android:id="@+id/btnMove2"
                     android:layout_width="571px"
-                    android:layout_height="199px"
-                    android:layout_margin="8dp"
+                    android:layout_height="239px"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
@@ -176,8 +185,11 @@
                 <RelativeLayout
                     android:id="@+id/btnMove3"
                     android:layout_width="571px"
-                    android:layout_height="199px"
-                    android:layout_margin="8dp"
+                    android:layout_height="239px"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
