@@ -250,6 +250,9 @@
                          } else {
                              originalFightProcessInput.call(this, 7);
                          }
+                         // Reset cursor to move 0 (index 0)
+                         this._customCursor = null;
+                         this.setCursor(0);
                          return true;
                      } else if (cursor === 5) {
                          // User explicitly confirms BACK button
@@ -419,9 +422,48 @@
     forceMoveDescriptions();
     hideFightMenuCursor();
 
+    let teraAssetsFetched = false;
+    let cachedTeraIconB64 = "";
+    let cachedTeraPatternB64 = "";
+
+    const fetchTeraAssets = async () => {
+        if (teraAssetsFetched) return;
+        try {
+            // Check if game is loaded enough
+            if (!window.globalScene || !window.globalScene.game) return;
+
+            // Fetch the spritesheet
+            const iconUrl = 'images/ui/button_tera.png';
+            const iconRes = await fetch(iconUrl);
+            const iconBlob = await iconRes.blob();
+            const iconReader = new FileReader();
+            iconReader.onloadend = () => {
+                cachedTeraIconB64 = iconReader.result;
+            };
+            iconReader.readAsDataURL(iconBlob);
+
+            // Fetch the pattern
+            const patternUrl = 'images/effects/tera.png';
+            const patternRes = await fetch(patternUrl);
+            const patternBlob = await patternRes.blob();
+            const patternReader = new FileReader();
+            patternReader.onloadend = () => {
+                cachedTeraPatternB64 = patternReader.result;
+            };
+            patternReader.readAsDataURL(patternBlob);
+
+            teraAssetsFetched = true;
+        } catch (e) {
+            console.error("Failed to fetch Tera assets:", e);
+        }
+    };
+
     let lastPayloadStr = "";
+    let teraAssetsSent = false;
 
     const syncState = () => {
+        if (!teraAssetsFetched) fetchTeraAssets();
+
         if (!window.globalScene || !window.globalScene.ui) return;
         try {
             let stateStr = "BUSY";
@@ -445,27 +487,53 @@
                          payloadData.cursor = (handler._customCursor !== undefined && handler._customCursor !== null)
                              ? handler._customCursor
                              : handler.getCursor();
+                         payloadData.isTeraQueued = handler.fromCommand === 4;
                      }
                      if (commandHandler) {
                          payloadData.canTera = commandHandler.canTera ? commandHandler.canTera() : false;
                      }
+
+                     if (cachedTeraIconB64 && cachedTeraPatternB64 && !teraAssetsSent) {
+                         payloadData.teraAssets = {
+                             icons: cachedTeraIconB64,
+                             pattern: cachedTeraPatternB64
+                         };
+                         teraAssetsSent = true;
+                     }
+
                      if (typeof window.globalScene.getPlayerField === 'function') {
                          const field = window.globalScene.getPlayerField();
                          if (field && field.length > 0) {
                              const active = getActivePokemon(ui, field);
-                             if (active && (active.getMoveset || active.moveset)) {
-                                 const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
-                                 if (moveset) {
-                                     payloadData.moves = [];
-                                     for (let i = 0; i < 4; i++) {
-                                         const mObj = moveset[i];
-                                         if (mObj && mObj.moveId !== 0) {
-                                             const move = mObj.getMove ? mObj.getMove() : null;
-                                             const name = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
-                                             const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
-                                             const ppUsed = mObj.ppUsed || 0;
-                                             const type = move ? move.type : 0;
-                                             payloadData.moves.push({ index: i, name: name, type: type, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
+                             if (active) {
+                                 if (typeof active.getTeraType === 'function') {
+                                     payloadData.teraType = active.getTeraType();
+                                 } else if (active.teraType !== undefined) {
+                                     payloadData.teraType = active.teraType;
+                                 }
+
+                                 // Optional: Extract color if the method exists, else fallback in Kotlin
+                                 if (typeof window.getTypeRgb === 'function') {
+                                      // PokeRogue might use getTypeRgb(teraType)
+                                      try {
+                                          payloadData.teraColor = window.getTypeRgb(payloadData.teraType);
+                                      } catch (e) {}
+                                 }
+
+                                 if (active.getMoveset || active.moveset) {
+                                     const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
+                                     if (moveset) {
+                                         payloadData.moves = [];
+                                         for (let i = 0; i < 4; i++) {
+                                             const mObj = moveset[i];
+                                             if (mObj && mObj.moveId !== 0) {
+                                                 const move = mObj.getMove ? mObj.getMove() : null;
+                                                 const name = mObj.getName ? mObj.getName() : (move ? move.name : "Unknown");
+                                                 const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
+                                                 const ppUsed = mObj.ppUsed || 0;
+                                                 const type = move ? move.type : 0;
+                                                 payloadData.moves.push({ index: i, name: name, type: type, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
+                                             }
                                          }
                                      }
                                  }
