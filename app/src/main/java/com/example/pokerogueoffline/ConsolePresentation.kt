@@ -33,19 +33,21 @@ import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.graphics.BitmapShader
 import android.graphics.Shader
-import android.graphics.Matrix
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 
 class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColorArray: org.json.JSONArray?) : Drawable() {
 
     private val paint = Paint()
     private val overlayPaint = Paint()
-    private var teraTime = 0f
+    private var hueOffset = 0f
     private var animator: ValueAnimator? = null
     var maskDrawable: Drawable? = null
-    private val shaderMatrix = Matrix()
+    private val hueColorMatrix = ColorMatrix()
 
     // We use integer color from the JSON array: [r, g, b]
     private var glowColorInt: Int = Color.TRANSPARENT
+    private var desatAlpha: Int = 0
 
     init {
         if (glowColorArray != null && glowColorArray.length() == 3) {
@@ -54,6 +56,12 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
             val b = glowColorArray.optInt(2, 0)
             // PokeRogue rgb is 0-255
             glowColorInt = Color.argb(255, r, g, b)
+
+            // Calculate desaturation alpha pass
+            val hsv = FloatArray(3)
+            Color.colorToHSV(glowColorInt, hsv)
+            val saturation = hsv[1]
+            desatAlpha = (((1.0f - saturation) / 2.0f) * 255.0f).toInt()
         }
 
         // Setup paints
@@ -62,21 +70,20 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
 
         overlayPaint.isFilterBitmap = false
-        // MULTIPLY helps blend the pattern while SRC_ATOP ensures it clips to the mask
-        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
-        overlayPaint.colorFilter = PorterDuffColorFilter(glowColorInt, PorterDuff.Mode.MULTIPLY)
+        // OVERLAY composite for the pattern as per shader specifications
+        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
 
         if (patternBitmap != null) {
             overlayPaint.shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
         }
 
-        // Setup animation
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 2000 // 2 seconds for a full loop
+        // Setup animation: Hue rotates 360 degrees in ~1960ms (0.51 cycles per second)
+        animator = ValueAnimator.ofFloat(0f, 360f).apply {
+            duration = 1960
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
             addUpdateListener { anim ->
-                teraTime = anim.animatedValue as Float
+                hueOffset = anim.animatedValue as Float
                 invalidateSelf()
             }
             start()
@@ -107,15 +114,36 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // 3. Draw crystal pattern
         if (patternBitmap != null) {
-            // Shift the shader matrix to simulate movement
-            val maxOffset = Math.max(bounds.width(), bounds.height()).toFloat()
-            val offset = teraTime * maxOffset
-            shaderMatrix.setTranslate(-offset, -offset)
-            overlayPaint.shader.setLocalMatrix(shaderMatrix)
+            // Apply Hue shifting via ColorMatrix
+            hueColorMatrix.setRotate(0, hueOffset) // Rotate Red (Approximate Hue)
+            hueColorMatrix.postConcat(ColorMatrix().apply { setRotate(1, hueOffset) }) // Rotate Green
+            hueColorMatrix.postConcat(ColorMatrix().apply { setRotate(2, hueOffset) }) // Rotate Blue
 
+            // Tint to Tera Color
+            val r = Color.red(glowColorInt) / 255f
+            val g = Color.green(glowColorInt) / 255f
+            val b = Color.blue(glowColorInt) / 255f
+            val tintMatrix = ColorMatrix(floatArrayOf(
+                r, 0f, 0f, 0f, 0f,
+                0f, g, 0f, 0f, 0f,
+                0f, 0f, b, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            hueColorMatrix.postConcat(tintMatrix)
+
+            overlayPaint.colorFilter = ColorMatrixColorFilter(hueColorMatrix)
             overlayPaint.alpha = (255 * 0.5f).toInt() // 50% opacity
+
+            // We use a secondary layer to enforce SRC_ATOP clipping of the OVERLAY blend
+            val patternSaveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) })
             canvas.drawRect(bounds, overlayPaint)
+            canvas.restoreToCount(patternSaveCount)
         }
+
+        // 4. Draw desaturation pass
+        paint.color = glowColorInt
+        paint.alpha = desatAlpha
+        canvas.drawRect(bounds, paint)
 
         canvas.restoreToCount(saveCount)
     }
