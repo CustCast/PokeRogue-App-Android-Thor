@@ -31,6 +31,9 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
+import android.graphics.BitmapShader
+import android.graphics.Shader
+import android.graphics.Matrix
 
 class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColorArray: org.json.JSONArray?) : Drawable() {
 
@@ -38,6 +41,8 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
     private val overlayPaint = Paint()
     private var teraTime = 0f
     private var animator: ValueAnimator? = null
+    var maskDrawable: Drawable? = null
+    private val shaderMatrix = Matrix()
 
     // We use integer color from the JSON array: [r, g, b]
     private var glowColorInt: Int = Color.TRANSPARENT
@@ -53,8 +58,17 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // Setup paints
         paint.isFilterBitmap = false
+        // The base tint will clip to the mask using SRC_ATOP
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+
         overlayPaint.isFilterBitmap = false
-        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
+        // MULTIPLY helps blend the pattern while SRC_ATOP ensures it clips to the mask
+        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+        overlayPaint.colorFilter = PorterDuffColorFilter(glowColorInt, PorterDuff.Mode.MULTIPLY)
+
+        if (patternBitmap != null) {
+            overlayPaint.shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+        }
 
         // Setup animation
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -71,33 +85,39 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
     override fun draw(canvas: Canvas) {
         val bounds = bounds
+        if (bounds.isEmpty) return
 
-        // 1. Draw base tint (simulating the mix hue over the button)
+        // Create an offscreen buffer so PorterDuff.Mode.SRC_ATOP works against our mask instead of the whole screen
+        val saveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), null)
+
+        // 1. Draw the mask (establishes the alpha channel boundary)
+        maskDrawable?.let {
+            it.bounds = bounds
+            it.draw(canvas)
+        } ?: run {
+            // Fallback: draw a solid rectangle if no mask is provided
+            val fallbackPaint = Paint().apply { color = Color.WHITE }
+            canvas.drawRect(bounds, fallbackPaint)
+        }
+
+        // 2. Draw base tint (simulating the mix hue over the button/icon)
         paint.color = glowColorInt
         paint.alpha = (255 * 0.625f).toInt() // 62.5% opacity as per shader
         canvas.drawRect(bounds, paint)
 
-        // 2. Draw crystal pattern if available
+        // 3. Draw crystal pattern
         if (patternBitmap != null) {
-            val srcRect = Rect(0, 0, patternBitmap.width, patternBitmap.height)
+            // Shift the shader matrix to simulate movement
+            val maxOffset = Math.max(bounds.width(), bounds.height()).toFloat()
+            val offset = teraTime * maxOffset
+            shaderMatrix.setTranslate(-offset, -offset)
+            overlayPaint.shader.setLocalMatrix(shaderMatrix)
 
-            // To simulate the 'shifting' effect in the shader, we offset the drawing based on teraTime
-            val maxOffset = bounds.width() / 2
-            val offset = (teraTime * maxOffset).toInt()
-
-            val destRect = Rect(
-                bounds.left - offset,
-                bounds.top - offset,
-                bounds.right + maxOffset,
-                bounds.bottom + maxOffset
-            )
-
-            // Tint the crystal pattern with the Tera color at 50% opacity
-            overlayPaint.colorFilter = PorterDuffColorFilter(glowColorInt, PorterDuff.Mode.SRC_ATOP)
             overlayPaint.alpha = (255 * 0.5f).toInt() // 50% opacity
-
-            canvas.drawBitmap(patternBitmap, srcRect, destRect, overlayPaint)
+            canvas.drawRect(bounds, overlayPaint)
         }
+
+        canvas.restoreToCount(saveCount)
     }
 
     override fun setAlpha(alpha: Int) {
@@ -617,6 +637,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 }
 
                 // Handle Glow logic
+                val moveButtons = listOf(btnMove0, btnMove1, btnMove2, btnMove3)
                 val glowViews = listOf(teraGlowMove0, teraGlowMove1, teraGlowMove2, teraGlowMove3)
 
                 // Tera button glow
@@ -624,6 +645,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                     if (teraGlowTera.background !is TeraGlowDrawable) {
                         teraGlowTera.background = TeraGlowDrawable(teraPatternBitmap, teraColorArray)
                     }
+                    (teraGlowTera.background as? TeraGlowDrawable)?.maskDrawable = ivTeraIcon.drawable
                     teraGlowTera.visibility = View.VISIBLE
                 } else {
                     (teraGlowTera.background as? TeraGlowDrawable)?.stopAnimation()
@@ -634,10 +656,13 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 // Move buttons glow
                 for (i in glowViews.indices) {
                     val glowView = glowViews[i]
+                    val parentButton = moveButtons[i]
+
                     if (isTeraQueued && (cursor == i || (cursor == -1 && i == 0))) {
                         if (glowView.background !is TeraGlowDrawable) {
                             glowView.background = TeraGlowDrawable(teraPatternBitmap, teraColorArray)
                         }
+                        (glowView.background as? TeraGlowDrawable)?.maskDrawable = parentButton.background
                         glowView.visibility = View.VISIBLE
                     } else {
                         (glowView.background as? TeraGlowDrawable)?.stopAnimation()
