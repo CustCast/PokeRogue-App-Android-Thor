@@ -250,17 +250,17 @@
                 android:clickable="true"
                 android:focusable="true">
 
-                <View
-                    android:id="@+id/teraGlowTera"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone" />
-
                 <ImageView
                     android:id="@+id/ivTeraIcon"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter" />
+
+                <View
+                    android:id="@+id/teraGlowTera"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
             </FrameLayout>
 
             <Button
