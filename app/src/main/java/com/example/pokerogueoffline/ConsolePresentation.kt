@@ -78,6 +78,9 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // Layer 2A: The Pattern Base
         patternPaint.isFilterBitmap = false
+        if (patternBitmap != null) {
+            patternPaint.shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+        }
 
         // Layer 2B: The Shimmer Wave (Overlayed over pattern to dynamically brighten/darken facets)
         shimmerPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
@@ -126,13 +129,15 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // --- LAYER 2: THE CRYSTAL PATTERN ---
         if (patternBitmap != null) {
-            // Setup the shimmer gradient if we haven't already mapped it to bounds
+            // Setup the shimmer gradient if we haven't already mapped it
             if (shimmerGradient == null) {
-                // Diagonal spanning the entire bounds, simulating the optical illusion of brightness waves
+                // Tightly packed diagonal block (100x100) to create dense, moving waves
+                val w = Color.argb(120, 255, 255, 255)
+                val b = Color.argb(120, 0, 0, 0)
                 shimmerGradient = LinearGradient(
-                    0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(),
+                    0f, 0f, 100f, 100f,
                     intArrayOf(
-                        Color.WHITE, Color.TRANSPARENT, Color.BLACK, Color.TRANSPARENT, Color.WHITE
+                        w, Color.TRANSPARENT, b, Color.TRANSPARENT, w
                     ),
                     floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f),
                     Shader.TileMode.REPEAT
@@ -140,24 +145,21 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
                 shimmerPaint.shader = shimmerGradient
             }
 
-            // Create a nested layer that OVERLAYS onto Layer 1.
-            // We also need it to strictly clip to the alpha of Layer 1.
-            // Using SRC_ATOP on the final layer apply does the clipping. So we save the layer with OVERLAY.
+            // Create a nested layer to composite the crystal pattern.
+            // By applying the OVERLAY paint here, the entire composite drawn in this block
+            // will be flattened and OVERLAYed onto Layer 1 when we call restoreToCount.
             val compositePaint = Paint().apply {
                 xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
+                alpha = 180 // ~70% opacity so the crystal layer doesn't completely overpower the base tint
             }
-            // To ensure we only OVERLAY onto visible pixels of the mask, we save another layer clipped via SRC_ATOP
-            val patternSaveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) })
-
-            // Inside this SRC_ATOP restricted buffer, we build our crystal composite
             val crystalSaveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), compositePaint)
 
-            // 2A: Draw the base crystal pattern scaled to bounds
-            val srcRect = Rect(0, 0, Math.min(bounds.width(), 200), Math.min(bounds.height(), 120))
-            canvas.drawBitmap(patternBitmap, srcRect, bounds, patternPaint)
+            // 2A: Draw the base crystal pattern (using the repeating shader)
+            canvas.drawRect(bounds, patternPaint)
 
             // 2B: Draw the shifting brightness wave (OVERLAY to lighten/darken the grayscale facets)
-            val shiftAmount = offsetRatio * bounds.width()
+            // Shift the 100x100 gradient block exactly 100 pixels across its diagonal to create a seamless loop
+            val shiftAmount = offsetRatio * 100f
             gradientMatrix.setTranslate(shiftAmount, shiftAmount)
             shimmerGradient?.setLocalMatrix(gradientMatrix)
             canvas.drawRect(bounds, shimmerPaint)
@@ -165,10 +167,19 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
             // 2C: Tint the animated crystals to the Tera element color (50% opacity)
             canvas.drawRect(bounds, patternTintPaint)
 
-            // Flatten crystal composite onto the SRC_ATOP layer using OVERLAY
+            // 2D: Clip the crystal layer precisely to the mask using DST_IN
+            val dstInPaint = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
+            canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), dstInPaint)
+            maskDrawable?.let {
+                it.bounds = bounds
+                it.draw(canvas)
+            } ?: run {
+                canvas.drawRect(bounds, Paint().apply { color = Color.WHITE })
+            }
+            canvas.restore() // Apply DST_IN clip
+
+            // Flatten the properly clipped crystal composite onto Layer 1 using OVERLAY
             canvas.restoreToCount(crystalSaveCount)
-            // Flatten the SRC_ATOP layer onto Layer 1
-            canvas.restoreToCount(patternSaveCount)
         }
 
         // --- LAYER 3: DESATURATION PASS ---
