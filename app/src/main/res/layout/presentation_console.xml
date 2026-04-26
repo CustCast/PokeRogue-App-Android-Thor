@@ -90,6 +90,13 @@
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
+
+                    <View
+                        android:id="@+id/teraGlowMove0"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
                     <TextView
                         android:id="@+id/tvMove0Name"
                         android:layout_width="wrap_content"
@@ -122,6 +129,13 @@
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
+
+                    <View
+                        android:id="@+id/teraGlowMove1"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
                     <TextView
                         android:id="@+id/tvMove1Name"
                         android:layout_width="wrap_content"
@@ -155,6 +169,13 @@
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
+
+                    <View
+                        android:id="@+id/teraGlowMove2"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
                     <TextView
                         android:id="@+id/tvMove2Name"
                         android:layout_width="wrap_content"
@@ -188,6 +209,13 @@
                     android:background="@drawable/retro_button_border"
                     android:clickable="true"
                     android:focusable="true">
+
+                    <View
+                        android:id="@+id/teraGlowMove3"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone" />
+
                     <TextView
                         android:id="@+id/tvMove3Name"
                         android:layout_width="wrap_content"
@@ -210,22 +238,30 @@
                 </RelativeLayout>
             </GridLayout>
 
-            <Button
+            <FrameLayout
                 android:id="@+id/btnMainTera"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="175px"
+                android:layout_height="204px"
                 android:layout_alignParentBottom="true"
                 android:layout_alignParentStart="true"
-                android:layout_margin="16dp"
-                android:paddingLeft="32dp"
-                android:paddingRight="32dp"
-                android:background="@drawable/retro_button_border"
-                android:text="TERA"
-                android:textColor="#33FF33"
-                android:textSize="24sp"
+                android:layout_marginStart="50px"
+                android:layout_marginBottom="20px"
                 android:visibility="gone"
-                android:backgroundTint="@null" />
+                android:clickable="true"
+                android:focusable="true">
+
+                <View
+                    android:id="@+id/teraGlowTera"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/ivTeraIcon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter" />
+            </FrameLayout>
 
             <Button
                 android:id="@+id/btnFightBack"

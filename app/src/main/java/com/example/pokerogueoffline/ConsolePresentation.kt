@@ -18,6 +18,102 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.ViewFlipper
 import org.json.JSONObject
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
+import android.animation.ValueAnimator
+import android.view.animation.LinearInterpolator
+
+class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColorArray: org.json.JSONArray?) : Drawable() {
+
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var teraTime = 0f
+    private var animator: ValueAnimator? = null
+
+    // We use integer color from the JSON array: [r, g, b]
+    private var glowColorInt: Int = Color.TRANSPARENT
+
+    init {
+        if (glowColorArray != null && glowColorArray.length() == 3) {
+            val r = glowColorArray.optInt(0, 0)
+            val g = glowColorArray.optInt(1, 0)
+            val b = glowColorArray.optInt(2, 0)
+            // PokeRogue rgb is 0-255
+            glowColorInt = Color.argb(255, r, g, b)
+        }
+
+        // Setup paints
+        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
+
+        // Setup animation
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 2000 // 2 seconds for a full loop
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            addUpdateListener { anim ->
+                teraTime = anim.animatedValue as Float
+                invalidateSelf()
+            }
+            start()
+        }
+    }
+
+    override fun draw(canvas: Canvas) {
+        val bounds = bounds
+
+        // 1. Draw base tint (simulating the mix hue over the button)
+        paint.color = glowColorInt
+        paint.alpha = (255 * 0.625f).toInt() // 62.5% opacity as per shader
+        canvas.drawRect(bounds, paint)
+
+        // 2. Draw crystal pattern if available
+        if (patternBitmap != null) {
+            val srcRect = Rect(0, 0, patternBitmap.width, patternBitmap.height)
+
+            // To simulate the 'shifting' effect in the shader, we offset the drawing based on teraTime
+            val maxOffset = bounds.width() / 2
+            val offset = (teraTime * maxOffset).toInt()
+
+            val destRect = Rect(
+                bounds.left - offset,
+                bounds.top - offset,
+                bounds.right + maxOffset,
+                bounds.bottom + maxOffset
+            )
+
+            // Tint the crystal pattern with the Tera color at 50% opacity
+            overlayPaint.colorFilter = PorterDuffColorFilter(glowColorInt, PorterDuff.Mode.SRC_ATOP)
+            overlayPaint.alpha = (255 * 0.5f).toInt() // 50% opacity
+
+            canvas.drawBitmap(patternBitmap, srcRect, destRect, overlayPaint)
+        }
+    }
+
+    override fun setAlpha(alpha: Int) {
+        paint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+        paint.colorFilter = colorFilter
+    }
+
+    @Deprecated("Deprecated in Java", ReplaceWith("android.graphics.PixelFormat.TRANSLUCENT", "android.graphics.PixelFormat"))
+    override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+
+    fun stopAnimation() {
+        animator?.cancel()
+        animator = null
+    }
+}
 
 class ConsolePresentation(private val outerContext: Context, display: Display) : Presentation(outerContext, display) {
 
@@ -28,7 +124,14 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private lateinit var layoutFightMenu: View
     private lateinit var layoutTargetSelect: View
 
-    private lateinit var btnMainTera: Button
+    private lateinit var btnMainTera: FrameLayout
+    private lateinit var ivTeraIcon: android.widget.ImageView
+    private lateinit var teraGlowTera: View
+    private lateinit var teraGlowMove0: View
+    private lateinit var teraGlowMove1: View
+    private lateinit var teraGlowMove2: View
+    private lateinit var teraGlowMove3: View
+
     private lateinit var btnMainFight: Button
     private lateinit var btnMainBall: Button
     private lateinit var btnMainPokemon: Button
@@ -74,6 +177,9 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private var baseBottomLeftY = 0f
     private var baseBottomRightX = 0f
     private var baseBottomRightY = 0f
+
+    private var teraIconsMap = mutableMapOf<Int, Bitmap>()
+    private var teraPatternBitmap: Bitmap? = null
 
     private val cursorRunnable = object : Runnable {
         override fun run() {
@@ -122,6 +228,13 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         btnMainBall = findViewById(R.id.btnMainBall)
         btnMainPokemon = findViewById(R.id.btnMainPokemon)
         btnMainRun = findViewById(R.id.btnMainRun)
+
+        ivTeraIcon = findViewById(R.id.ivTeraIcon)
+        teraGlowTera = findViewById(R.id.teraGlowTera)
+        teraGlowMove0 = findViewById(R.id.teraGlowMove0)
+        teraGlowMove1 = findViewById(R.id.teraGlowMove1)
+        teraGlowMove2 = findViewById(R.id.teraGlowMove2)
+        teraGlowMove3 = findViewById(R.id.teraGlowMove3)
 
         btnMove0 = findViewById(R.id.btnMove0)
         btnMove1 = findViewById(R.id.btnMove1)
@@ -354,8 +467,15 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                     }
                 }
             }
+        } else if (btn == btnMainTera) {
+             // MainTera is now a FrameLayout with an ImageView
+             if (isActive) {
+                 btn.setBackgroundResource(R.drawable.retro_button_border_focused)
+             } else {
+                 btn.background = null // The glow view and icon handle visuals
+             }
         } else {
-            // For standard buttons like Tera, Back, etc.
+            // For standard buttons like Target back, etc.
             if (isActive) {
                 btn.setBackgroundResource(R.drawable.retro_button_border_focused)
                 if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#000000"))
@@ -363,6 +483,69 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 btn.setBackgroundResource(R.drawable.retro_button_border)
                 if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
             }
+        }
+    }
+
+    private fun decodeBase64Bitmap(base64Str: String): Bitmap? {
+        try {
+            val cleanBase64 = base64Str.substringAfter("base64,")
+            val decodedBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+            return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
+    private fun processTeraAssets(assets: JSONObject?) {
+        if (assets == null) return
+
+        val iconsB64 = assets.optString("icons", "")
+        val patternB64 = assets.optString("pattern", "")
+
+        if (iconsB64.isNotEmpty() && teraIconsMap.isEmpty()) {
+            val fullSheet = decodeBase64Bitmap(iconsB64)
+            if (fullSheet != null) {
+                // Dimensions based on JS Jules mapping
+                val spriteW = 18
+                val spriteH = 21
+
+                val coords = mapOf(
+                    -1 to Pair(0, 0),    // UNKNOWN
+                    0 to Pair(54, 42),   // NORMAL
+                    1 to Pair(18, 21),   // FIGHTING
+                    2 to Pair(54, 21),   // FLYING
+                    3 to Pair(72, 42),   // POISON
+                    4 to Pair(18, 42),   // GROUND
+                    5 to Pair(18, 63),   // ROCK
+                    6 to Pair(18, 0),    // BUG
+                    7 to Pair(72, 21),   // GHOST
+                    8 to Pair(36, 63),   // STEEL
+                    9 to Pair(36, 21),   // FIRE
+                    10 to Pair(54, 63),  // WATER
+                    11 to Pair(0, 42),   // GRASS
+                    12 to Pair(72, 0),   // ELECTRIC
+                    13 to Pair(0, 63),   // PSYCHIC
+                    14 to Pair(36, 42),  // ICE
+                    15 to Pair(54, 0),   // DRAGON
+                    16 to Pair(36, 0),   // DARK
+                    17 to Pair(0, 21),   // FAIRY
+                    18 to Pair(72, 63)   // STELLAR
+                )
+
+                for ((type, coord) in coords) {
+                    try {
+                        val iconBitmap = Bitmap.createBitmap(fullSheet, coord.first, coord.second, spriteW, spriteH)
+                        teraIconsMap[type] = iconBitmap
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+
+        if (patternB64.isNotEmpty() && teraPatternBitmap == null) {
+            teraPatternBitmap = decodeBase64Bitmap(patternB64)
         }
     }
 
@@ -374,6 +557,11 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
 
         if (state != "MAIN_MENU" && state != "FIGHT_MENU") {
             hideCursors()
+        }
+
+        // Process assets if available
+        if (data != null && data.has("teraAssets")) {
+            processTeraAssets(data.optJSONObject("teraAssets"))
         }
 
         when (state) {
@@ -408,11 +596,50 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 // Sync visual state from game engine cursor
                 val cursor = data?.optInt("cursor", -1) ?: -1
                 val canTera = data?.optBoolean("canTera", false) ?: false
+                val isTeraQueued = data?.optBoolean("isTeraQueued", false) ?: false
+                val teraType = data?.optInt("teraType", -1) ?: -1
+                val teraColorArray = data?.optJSONArray("teraColor")
 
                 if (canTera) {
                     btnMainTera.visibility = View.VISIBLE
+                    // Set tera icon
+                    if (teraIconsMap.containsKey(teraType)) {
+                        ivTeraIcon.setImageBitmap(teraIconsMap[teraType])
+                    } else if (teraIconsMap.containsKey(-1)) {
+                        ivTeraIcon.setImageBitmap(teraIconsMap[-1])
+                    }
                 } else {
                     btnMainTera.visibility = View.GONE
+                }
+
+                // Handle Glow logic
+                val glowViews = listOf(teraGlowMove0, teraGlowMove1, teraGlowMove2, teraGlowMove3)
+
+                // Tera button glow
+                if (isTeraQueued) {
+                    if (teraGlowTera.background !is TeraGlowDrawable) {
+                        teraGlowTera.background = TeraGlowDrawable(teraPatternBitmap, teraColorArray)
+                    }
+                    teraGlowTera.visibility = View.VISIBLE
+                } else {
+                    (teraGlowTera.background as? TeraGlowDrawable)?.stopAnimation()
+                    teraGlowTera.background = null
+                    teraGlowTera.visibility = View.GONE
+                }
+
+                // Move buttons glow
+                for (i in glowViews.indices) {
+                    val glowView = glowViews[i]
+                    if (isTeraQueued && (cursor == i || (cursor == -1 && i == 0))) {
+                        if (glowView.background !is TeraGlowDrawable) {
+                            glowView.background = TeraGlowDrawable(teraPatternBitmap, teraColorArray)
+                        }
+                        glowView.visibility = View.VISIBLE
+                    } else {
+                        (glowView.background as? TeraGlowDrawable)?.stopAnimation()
+                        glowView.background = null
+                        glowView.visibility = View.GONE
+                    }
                 }
 
                 setButtonActive(btnMove0, cursor == 0 || cursor == -1)
