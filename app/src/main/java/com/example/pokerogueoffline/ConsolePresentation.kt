@@ -33,17 +33,23 @@ import android.animation.ValueAnimator
 import android.view.animation.LinearInterpolator
 import android.graphics.BitmapShader
 import android.graphics.Shader
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
+import android.graphics.LinearGradient
 
 class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColorArray: org.json.JSONArray?) : Drawable() {
 
-    private val paint = Paint()
-    private val overlayPaint = Paint()
-    private var hueOffset = 0f
+    private val baseTintPaint = Paint()
+    private val desatTintPaint = Paint()
+    private val patternPaint = Paint()
+    private val rainbowPaint = Paint()
+    private val patternTintPaint = Paint()
+
+    private var offsetRatio = 0f
     private var animator: ValueAnimator? = null
     var maskDrawable: Drawable? = null
-    private val hueColorMatrix = ColorMatrix()
+
+    private val gradientMatrix = Matrix()
+    private var rainbowGradient: LinearGradient? = null
 
     // We use integer color from the JSON array: [r, g, b]
     private var glowColorInt: Int = Color.TRANSPARENT
@@ -64,26 +70,35 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
             desatAlpha = (((1.0f - saturation) / 2.0f) * 255.0f).toInt()
         }
 
-        // Setup paints
-        paint.isFilterBitmap = false
-        // The base tint will clip to the mask using SRC_ATOP
-        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+        // Setup Paints
+        // Layer 1: Base Tint
+        baseTintPaint.color = glowColorInt
+        baseTintPaint.alpha = 159 // 62.5% opacity
+        baseTintPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
 
-        overlayPaint.isFilterBitmap = false
-        // OVERLAY composite for the pattern as per shader specifications
-        overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
+        // Layer 2A: The Pattern Base
+        patternPaint.isFilterBitmap = false
 
-        if (patternBitmap != null) {
-            overlayPaint.shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
-        }
+        // Layer 2B: The Rainbow Gradient (Multiplied over pattern)
+        rainbowPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
 
-        // Setup animation: Hue rotates 360 degrees in ~1960ms (0.51 cycles per second)
-        animator = ValueAnimator.ofFloat(0f, 360f).apply {
+        // Layer 2C: The Pattern Tint
+        patternTintPaint.color = glowColorInt
+        patternTintPaint.alpha = 128 // 50% opacity
+        patternTintPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+
+        // Layer 4: Desaturation Pass
+        desatTintPaint.color = glowColorInt
+        desatTintPaint.alpha = desatAlpha
+        desatTintPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+
+        // Setup animation: 1.0 ratio per 1960ms
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 1960
             repeatCount = ValueAnimator.INFINITE
             interpolator = LinearInterpolator()
             addUpdateListener { anim ->
-                hueOffset = anim.animatedValue as Float
+                offsetRatio = anim.animatedValue as Float
                 invalidateSelf()
             }
             start()
@@ -94,66 +109,82 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
         val bounds = bounds
         if (bounds.isEmpty) return
 
-        // Create an offscreen buffer so PorterDuff.Mode.SRC_ATOP works against our mask instead of the whole screen
+        // Create main offscreen buffer
         val saveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), null)
 
-        // 1. Draw the mask (establishes the alpha channel boundary)
+        // --- LAYER 1: BASE SHAPE & TINT ---
         maskDrawable?.let {
             it.bounds = bounds
             it.draw(canvas)
         } ?: run {
-            // Fallback: draw a solid rectangle if no mask is provided
             val fallbackPaint = Paint().apply { color = Color.WHITE }
             canvas.drawRect(bounds, fallbackPaint)
         }
 
-        // 2. Draw base tint (simulating the mix hue over the button/icon)
-        paint.color = glowColorInt
-        paint.alpha = (255 * 0.625f).toInt() // 62.5% opacity as per shader
-        canvas.drawRect(bounds, paint)
+        // Apply heavy 62.5% tint of the tera type
+        canvas.drawRect(bounds, baseTintPaint)
 
-        // 3. Draw crystal pattern
+        // --- LAYER 2: THE CRYSTAL PATTERN ---
         if (patternBitmap != null) {
-            // Apply Hue shifting via ColorMatrix
-            hueColorMatrix.setRotate(0, hueOffset) // Rotate Red (Approximate Hue)
-            hueColorMatrix.postConcat(ColorMatrix().apply { setRotate(1, hueOffset) }) // Rotate Green
-            hueColorMatrix.postConcat(ColorMatrix().apply { setRotate(2, hueOffset) }) // Rotate Blue
+            // Setup the rainbow gradient if we haven't already mapped it to bounds
+            if (rainbowGradient == null) {
+                // Diagonal spanning the entire bounds
+                rainbowGradient = LinearGradient(
+                    0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(),
+                    intArrayOf(
+                        Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN,
+                        Color.BLUE, Color.MAGENTA, Color.RED
+                    ),
+                    floatArrayOf(0f, 0.16f, 0.33f, 0.5f, 0.66f, 0.83f, 1f),
+                    Shader.TileMode.REPEAT
+                )
+                rainbowPaint.shader = rainbowGradient
+            }
 
-            // Tint to Tera Color
-            val r = Color.red(glowColorInt) / 255f
-            val g = Color.green(glowColorInt) / 255f
-            val b = Color.blue(glowColorInt) / 255f
-            val tintMatrix = ColorMatrix(floatArrayOf(
-                r, 0f, 0f, 0f, 0f,
-                0f, g, 0f, 0f, 0f,
-                0f, 0f, b, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
-            ))
-            hueColorMatrix.postConcat(tintMatrix)
-
-            overlayPaint.colorFilter = ColorMatrixColorFilter(hueColorMatrix)
-            overlayPaint.alpha = (255 * 0.5f).toInt() // 50% opacity
-
-            // We use a secondary layer to enforce SRC_ATOP clipping of the OVERLAY blend
+            // Create a nested layer that OVERLAYS onto Layer 1.
+            // We also need it to strictly clip to the alpha of Layer 1.
+            // Using SRC_ATOP on the final layer apply does the clipping. So we save the layer with OVERLAY.
+            val compositePaint = Paint().apply {
+                xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
+            }
+            // To ensure we only OVERLAY onto visible pixels of the mask, we save another layer clipped via SRC_ATOP
             val patternSaveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) })
-            canvas.drawRect(bounds, overlayPaint)
+
+            // Inside this SRC_ATOP restricted buffer, we build our crystal composite
+            val crystalSaveCount = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), compositePaint)
+
+            // 2A: Draw the base crystal pattern scaled to bounds
+            val srcRect = Rect(0, 0, Math.min(bounds.width(), 200), Math.min(bounds.height(), 120))
+            canvas.drawBitmap(patternBitmap, srcRect, bounds, patternPaint)
+
+            // 2B: Draw the shifting rainbow multiplier
+            val shiftAmount = offsetRatio * bounds.width()
+            gradientMatrix.setTranslate(shiftAmount, shiftAmount)
+            rainbowGradient?.setLocalMatrix(gradientMatrix)
+            canvas.drawRect(bounds, rainbowPaint)
+
+            // 2C: Tint the rainbow crystals to the Tera element color (50% opacity)
+            canvas.drawRect(bounds, patternTintPaint)
+
+            // Flatten crystal composite onto the SRC_ATOP layer using OVERLAY
+            canvas.restoreToCount(crystalSaveCount)
+            // Flatten the SRC_ATOP layer onto Layer 1
             canvas.restoreToCount(patternSaveCount)
         }
 
-        // 4. Draw desaturation pass
-        paint.color = glowColorInt
-        paint.alpha = desatAlpha
-        canvas.drawRect(bounds, paint)
+        // --- LAYER 3: DESATURATION PASS ---
+        canvas.drawRect(bounds, desatTintPaint)
 
+        // Flatten everything to screen
         canvas.restoreToCount(saveCount)
     }
 
     override fun setAlpha(alpha: Int) {
-        paint.alpha = alpha
+        baseTintPaint.alpha = alpha
     }
 
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
-        paint.colorFilter = colorFilter
+        baseTintPaint.colorFilter = colorFilter
     }
 
     @Deprecated("Deprecated in Java", ReplaceWith("android.graphics.PixelFormat.TRANSLUCENT", "android.graphics.PixelFormat"))
