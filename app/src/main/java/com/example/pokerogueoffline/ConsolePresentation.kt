@@ -41,7 +41,7 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
     private val baseTintPaint = Paint()
     private val desatTintPaint = Paint()
     private val patternPaint = Paint()
-    private val rainbowPaint = Paint()
+    private val shimmerPaint = Paint()
     private val patternTintPaint = Paint()
 
     private var offsetRatio = 0f
@@ -49,7 +49,7 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
     var maskDrawable: Drawable? = null
 
     private val gradientMatrix = Matrix()
-    private var rainbowGradient: LinearGradient? = null
+    private var shimmerGradient: LinearGradient? = null
 
     // We use integer color from the JSON array: [r, g, b]
     private var glowColorInt: Int = Color.TRANSPARENT
@@ -79,8 +79,8 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
         // Layer 2A: The Pattern Base
         patternPaint.isFilterBitmap = false
 
-        // Layer 2B: The Rainbow Gradient (Multiplied over pattern)
-        rainbowPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+        // Layer 2B: The Shimmer Wave (Overlayed over pattern to dynamically brighten/darken facets)
+        shimmerPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
 
         // Layer 2C: The Pattern Tint
         patternTintPaint.color = glowColorInt
@@ -126,19 +126,18 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // --- LAYER 2: THE CRYSTAL PATTERN ---
         if (patternBitmap != null) {
-            // Setup the rainbow gradient if we haven't already mapped it to bounds
-            if (rainbowGradient == null) {
-                // Diagonal spanning the entire bounds
-                rainbowGradient = LinearGradient(
+            // Setup the shimmer gradient if we haven't already mapped it to bounds
+            if (shimmerGradient == null) {
+                // Diagonal spanning the entire bounds, simulating the optical illusion of brightness waves
+                shimmerGradient = LinearGradient(
                     0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(),
                     intArrayOf(
-                        Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN,
-                        Color.BLUE, Color.MAGENTA, Color.RED
+                        Color.WHITE, Color.TRANSPARENT, Color.BLACK, Color.TRANSPARENT, Color.WHITE
                     ),
-                    floatArrayOf(0f, 0.16f, 0.33f, 0.5f, 0.66f, 0.83f, 1f),
+                    floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f),
                     Shader.TileMode.REPEAT
                 )
-                rainbowPaint.shader = rainbowGradient
+                shimmerPaint.shader = shimmerGradient
             }
 
             // Create a nested layer that OVERLAYS onto Layer 1.
@@ -157,13 +156,13 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
             val srcRect = Rect(0, 0, Math.min(bounds.width(), 200), Math.min(bounds.height(), 120))
             canvas.drawBitmap(patternBitmap, srcRect, bounds, patternPaint)
 
-            // 2B: Draw the shifting rainbow multiplier
+            // 2B: Draw the shifting brightness wave (OVERLAY to lighten/darken the grayscale facets)
             val shiftAmount = offsetRatio * bounds.width()
             gradientMatrix.setTranslate(shiftAmount, shiftAmount)
-            rainbowGradient?.setLocalMatrix(gradientMatrix)
-            canvas.drawRect(bounds, rainbowPaint)
+            shimmerGradient?.setLocalMatrix(gradientMatrix)
+            canvas.drawRect(bounds, shimmerPaint)
 
-            // 2C: Tint the rainbow crystals to the Tera element color (50% opacity)
+            // 2C: Tint the animated crystals to the Tera element color (50% opacity)
             canvas.drawRect(bounds, patternTintPaint)
 
             // Flatten crystal composite onto the SRC_ATOP layer using OVERLAY
