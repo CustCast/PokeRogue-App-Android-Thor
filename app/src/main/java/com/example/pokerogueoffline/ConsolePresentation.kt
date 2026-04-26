@@ -34,8 +34,8 @@ import android.view.animation.LinearInterpolator
 
 class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColorArray: org.json.JSONArray?) : Drawable() {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paint = Paint()
+    private val overlayPaint = Paint()
     private var teraTime = 0f
     private var animator: ValueAnimator? = null
 
@@ -52,6 +52,8 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
         }
 
         // Setup paints
+        paint.isFilterBitmap = false
+        overlayPaint.isFilterBitmap = false
         overlayPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
 
         // Setup animation
@@ -178,7 +180,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private var baseBottomRightX = 0f
     private var baseBottomRightY = 0f
 
-    private var teraIconsMap = mutableMapOf<Int, Bitmap>()
+    private var teraIconsMap = mutableMapOf<Int, android.graphics.drawable.BitmapDrawable>()
     private var teraPatternBitmap: Bitmap? = null
 
     private val cursorRunnable = object : Runnable {
@@ -469,11 +471,8 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
             }
         } else if (btn == btnMainTera) {
              // MainTera is now a FrameLayout with an ImageView
-             if (isActive) {
-                 btn.setBackgroundResource(R.drawable.retro_button_border_focused)
-             } else {
-                 btn.background = null // The glow view and icon handle visuals
-             }
+             // We do not set any green background, we let the animated 4-corner cursor handle the focus visually.
+             btn.background = null
         } else {
             // For standard buttons like Target back, etc.
             if (isActive) {
@@ -536,7 +535,12 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 for ((type, coord) in coords) {
                     try {
                         val iconBitmap = Bitmap.createBitmap(fullSheet, coord.first, coord.second, spriteW, spriteH)
-                        teraIconsMap[type] = iconBitmap
+                        // Scale using nearest neighbor (filter = false)
+                        val scaledBitmap = Bitmap.createScaledBitmap(iconBitmap, 175, 204, false)
+                        val drawable = android.graphics.drawable.BitmapDrawable(outerContext.resources, scaledBitmap)
+                        drawable.paint.isFilterBitmap = false // Ensure pixel-perfect scaling
+                        drawable.paint.isAntiAlias = false
+                        teraIconsMap[type] = drawable
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -604,9 +608,9 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                     btnMainTera.visibility = View.VISIBLE
                     // Set tera icon
                     if (teraIconsMap.containsKey(teraType)) {
-                        ivTeraIcon.setImageBitmap(teraIconsMap[teraType])
+                        ivTeraIcon.setImageDrawable(teraIconsMap[teraType])
                     } else if (teraIconsMap.containsKey(-1)) {
-                        ivTeraIcon.setImageBitmap(teraIconsMap[-1])
+                        ivTeraIcon.setImageDrawable(teraIconsMap[-1])
                     }
                 } else {
                     btnMainTera.visibility = View.GONE

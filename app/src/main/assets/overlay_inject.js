@@ -9,6 +9,28 @@
         14: "ALL", 15: "USER_SIDE", 16: "ENEMY_SIDE", 17: "BOTH_SIDES", 18: "PARTY", 19: "CURSE"
     };
 
+    const TERA_COLORS = {
+      0: [168, 168, 120],  // NORMAL
+      1: [192, 48, 40],    // FIGHTING
+      2: [168, 144, 240],  // FLYING
+      3: [160, 64, 160],   // POISON
+      4: [224, 192, 104],  // GROUND
+      5: [184, 160, 56],   // ROCK
+      6: [168, 184, 32],   // BUG
+      7: [112, 88, 152],   // GHOST
+      8: [184, 184, 208],  // STEEL
+      9: [240, 128, 48],   // FIRE
+      10: [104, 144, 240], // WATER
+      11: [120, 200, 80],  // GRASS
+      12: [248, 208, 48],  // ELECTRIC
+      13: [248, 88, 136],  // PSYCHIC
+      14: [152, 216, 216], // ICE
+      15: [112, 56, 248],  // DRAGON
+      16: [112, 88, 72],   // DARK
+      17: [232, 136, 200], // FAIRY
+      18: [255, 255, 255]  // STELLAR
+    };
+
     let sceneCaptured = false;
     const origPush = Array.prototype.push;
     Array.prototype.push = function(...args) {
@@ -78,7 +100,12 @@
                     if (commandHandler && commandHandler.active) { commandHandler.setCursor(3); window.globalScene.ui.processInput(5); }
                     break;
                 case "MAIN_TERA":
-                    window.globalScene.ui.processInput(14); // CYCLE_TERA
+                    // Using touch fallback when Tera is active on fight menu
+                    if (fightHandler && fightHandler.active && commandHandler && commandHandler.canTera && commandHandler.canTera()) {
+                        fightHandler.fromCommand = (fightHandler.fromCommand === 4) ? 0 : 4;
+                        fightHandler.setCursor(0);
+                        window.globalScene.ui.playSelect();
+                    }
                     break;
                 case "SELECT_MOVE_0":
                      if (fightHandler && fightHandler.active) { fightHandler.setCursor(0); window.globalScene.ui.processInput(5); }
@@ -245,12 +272,10 @@
                 if (button === 5) { // ACTION button (Enum 5 in PokeRogue)
                      if (cursor === 4) {
                          window.globalScene.ui.playSelect();
-                         if (window.globalScene.ui.handlers[2] && typeof window.globalScene.ui.handlers[2].terastallize === 'function') {
-                             window.globalScene.ui.handlers[2].terastallize();
-                         } else {
-                             originalFightProcessInput.call(this, 7);
-                         }
-                         // Reset cursor to move 0 (index 0)
+                         // Manually set fromCommand state to queue it in the fight handler engine directly
+                         this.fromCommand = (this.fromCommand === 4) ? 0 : 4;
+
+                         // Reset cursor to move 0 (index 0) and trigger re-render
                          this._customCursor = null;
                          this.setCursor(0);
                          return true;
@@ -512,12 +537,24 @@
                                      payloadData.teraType = active.teraType;
                                  }
 
-                                 // Optional: Extract color if the method exists, else fallback in Kotlin
-                                 if (typeof window.getTypeRgb === 'function') {
-                                      // PokeRogue might use getTypeRgb(teraType)
-                                      try {
-                                          payloadData.teraColor = window.getTypeRgb(payloadData.teraType);
-                                      } catch (e) {}
+                                 // Safely extract color mapping
+                                 if (payloadData.teraType !== undefined && TERA_COLORS[payloadData.teraType] !== undefined) {
+                                     payloadData.teraColor = TERA_COLORS[payloadData.teraType];
+                                 } else if (typeof window.getTypeRgb === 'function') {
+                                     try { payloadData.teraColor = window.getTypeRgb(payloadData.teraType); } catch (e) {}
+                                 } else {
+                                     // Fallback
+                                     try {
+                                         const activePokemonSprite = window.globalScene.getField()[0];
+                                         if (activePokemonSprite && activePokemonSprite.pipelineData && activePokemonSprite.pipelineData["teraColor"]) {
+                                             const rgbFractions = activePokemonSprite.pipelineData["teraColor"];
+                                             payloadData.teraColor = [
+                                                Math.floor(rgbFractions[0] * 255),
+                                                Math.floor(rgbFractions[1] * 255),
+                                                Math.floor(rgbFractions[2] * 255)
+                                             ];
+                                         }
+                                     } catch (e) {}
                                  }
 
                                  if (active.getMoveset || active.moveset) {
