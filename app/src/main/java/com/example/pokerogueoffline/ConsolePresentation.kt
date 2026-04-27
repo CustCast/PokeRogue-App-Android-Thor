@@ -78,8 +78,13 @@ class TeraGlowDrawable(private val patternBitmap: Bitmap?, private val glowColor
 
         // Layer 2A: The Pattern Base
         patternPaint.isFilterBitmap = false
+        patternPaint.alpha = 204 // 80% opacity (20% more transparent)
         if (patternBitmap != null) {
-            patternPaint.shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+            val shader = BitmapShader(patternBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+            val scaleMatrix = Matrix()
+            scaleMatrix.setScale(5f, 5f)
+            shader.setLocalMatrix(scaleMatrix)
+            patternPaint.shader = shader
         }
 
         // Layer 2B: The Shimmer Wave (Overlayed over pattern to dynamically brighten/darken facets)
