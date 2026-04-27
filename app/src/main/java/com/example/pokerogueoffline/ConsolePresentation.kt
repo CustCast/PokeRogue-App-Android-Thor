@@ -381,6 +381,10 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         super.onStart()
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         outerContext.registerReceiver(batteryReceiver, filter)
+
+        // Force the JS engine to re-sync full state payload (including Tera assets)
+        // upon resuming/creating the Presentation view to prevent empty "BUSY" states.
+        executeFallbackTouch("FORCE_SYNC")
     }
 
     override fun onStop() {

@@ -87,6 +87,11 @@
             }
 
             switch (command) {
+                case "FORCE_SYNC":
+                    lastPayloadStr = "";
+                    teraAssetsSent = false;
+                    if (typeof syncState === 'function') syncState();
+                    break;
                 case "MAIN_FIGHT":
                     if (commandHandler && commandHandler.active) { commandHandler.setCursor(0); window.globalScene.ui.processInput(5); }
                     break;
