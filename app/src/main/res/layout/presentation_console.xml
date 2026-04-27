@@ -97,25 +97,52 @@
                         android:layout_height="match_parent"
                         android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/tvMove0Name"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="55px"
-                        android:textColor="#33FF33"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:text="-" />
-                    <TextView
-                        android:id="@+id/tvMove0Pp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="120px"
-                        android:textColor="#33FF33"
-                        android:textSize="24sp"
-                        android:text="PP: 0/0" />
+                        android:layout_centerInParent="true"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvMove0Name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#33FF33"
+                            android:textSize="26sp"
+                            android:textStyle="bold"
+                            android:text="-" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:id="@+id/tvMove0Pp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#33FF33"
+                                android:textSize="24sp"
+                                android:text="PP: 0/0" />
+
+                            <ImageView
+                                android:id="@+id/ivMove0Eff0"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="16dp"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/ivMove0Eff1"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </RelativeLayout>
 
                 <RelativeLayout
@@ -136,25 +163,52 @@
                         android:layout_height="match_parent"
                         android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/tvMove1Name"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="55px"
-                        android:textColor="#33FF33"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:text="-" />
-                    <TextView
-                        android:id="@+id/tvMove1Pp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="120px"
-                        android:textColor="#33FF33"
-                        android:textSize="24sp"
-                        android:text="PP: 0/0" />
+                        android:layout_centerInParent="true"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvMove1Name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#33FF33"
+                            android:textSize="26sp"
+                            android:textStyle="bold"
+                            android:text="-" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:id="@+id/tvMove1Pp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#33FF33"
+                                android:textSize="24sp"
+                                android:text="PP: 0/0" />
+
+                            <ImageView
+                                android:id="@+id/ivMove1Eff0"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="16dp"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/ivMove1Eff1"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </RelativeLayout>
 
                 <RelativeLayout
@@ -176,25 +230,52 @@
                         android:layout_height="match_parent"
                         android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/tvMove2Name"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="55px"
-                        android:textColor="#33FF33"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:text="-" />
-                    <TextView
-                        android:id="@+id/tvMove2Pp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="120px"
-                        android:textColor="#33FF33"
-                        android:textSize="24sp"
-                        android:text="PP: 0/0" />
+                        android:layout_centerInParent="true"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvMove2Name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#33FF33"
+                            android:textSize="26sp"
+                            android:textStyle="bold"
+                            android:text="-" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:id="@+id/tvMove2Pp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#33FF33"
+                                android:textSize="24sp"
+                                android:text="PP: 0/0" />
+
+                            <ImageView
+                                android:id="@+id/ivMove2Eff0"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="16dp"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/ivMove2Eff1"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </RelativeLayout>
 
                 <RelativeLayout
@@ -216,25 +297,52 @@
                         android:layout_height="match_parent"
                         android:visibility="gone" />
 
-                    <TextView
-                        android:id="@+id/tvMove3Name"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="55px"
-                        android:textColor="#33FF33"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:text="-" />
-                    <TextView
-                        android:id="@+id/tvMove3Pp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginTop="120px"
-                        android:textColor="#33FF33"
-                        android:textSize="24sp"
-                        android:text="PP: 0/0" />
+                        android:layout_centerInParent="true"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvMove3Name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#33FF33"
+                            android:textSize="26sp"
+                            android:textStyle="bold"
+                            android:text="-" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:id="@+id/tvMove3Pp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#33FF33"
+                                android:textSize="24sp"
+                                android:text="PP: 0/0" />
+
+                            <ImageView
+                                android:id="@+id/ivMove3Eff0"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="16dp"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/ivMove3Eff1"
+                                android:layout_width="35px"
+                                android:layout_height="50px"
+                                android:layout_marginStart="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </RelativeLayout>
             </GridLayout>
 
