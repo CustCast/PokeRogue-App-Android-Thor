@@ -595,7 +595,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#000000"))
             } else {
                 btn.setBackgroundResource(R.drawable.retro_button_border)
-                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+                if (btn is Button) btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
             }
         }
     }
@@ -897,7 +897,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
 
                 // Style button retro terminal
                 btn.setBackgroundResource(R.drawable.retro_button_border)
-                btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+                btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                 btn.textSize = 24f
                 val layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -917,7 +917,7 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
 
                     // Style button retro terminal
                     btn.setBackgroundResource(R.drawable.retro_button_border)
-                    btn.setTextColor(android.graphics.Color.parseColor("#33FF33"))
+                    btn.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
                     btn.textSize = 24f
                     val layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
