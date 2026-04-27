@@ -564,6 +564,10 @@
 
                                  if (active.getMoveset || active.moveset) {
                                      const moveset = active.getMoveset ? active.getMoveset() : active.moveset;
+                                     let opponents = [];
+                                     if (typeof active.getOpponents === 'function') {
+                                         opponents = active.getOpponents();
+                                     }
                                      if (moveset) {
                                          payloadData.moves = [];
                                          for (let i = 0; i < 4; i++) {
@@ -574,7 +578,22 @@
                                                  const maxPp = mObj.getMovePp ? mObj.getMovePp() : (move ? move.pp : 0);
                                                  const ppUsed = mObj.ppUsed || 0;
                                                  const type = move ? move.type : 0;
-                                                 payloadData.moves.push({ index: i, name: name, type: type, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp });
+                                                 let multipliers = [];
+                                                 if (move && opponents.length > 0) {
+                                                     const isStatus = move.category === 2; // MoveCategory.STATUS is 2
+                                                     for (let j = 0; j < opponents.length; j++) {
+                                                         const opponent = opponents[j];
+                                                         if (opponent && typeof opponent.getMoveEffectiveness === 'function') {
+                                                             const abilityRevealed = opponent.waveData ? opponent.waveData.abilityRevealed : false;
+                                                             let eff = opponent.getMoveEffectiveness(active, move, !abilityRevealed, undefined, undefined, true);
+                                                             if (isStatus && eff !== 0) {
+                                                                 eff = 1;
+                                                             }
+                                                             multipliers.push(eff);
+                                                         }
+                                                     }
+                                                 }
+                                                 payloadData.moves.push({ index: i, name: name, type: type, pp: Math.max(0, maxPp - ppUsed), maxPp: maxPp, multipliers: multipliers });
                                              }
                                          }
                                      }

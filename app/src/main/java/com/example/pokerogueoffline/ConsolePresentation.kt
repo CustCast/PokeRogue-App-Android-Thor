@@ -246,6 +246,14 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
     private lateinit var tvMove2Pp: TextView
     private lateinit var tvMove3Name: TextView
     private lateinit var tvMove3Pp: TextView
+    private lateinit var ivMove0Eff0: android.widget.ImageView
+    private lateinit var ivMove0Eff1: android.widget.ImageView
+    private lateinit var ivMove1Eff0: android.widget.ImageView
+    private lateinit var ivMove1Eff1: android.widget.ImageView
+    private lateinit var ivMove2Eff0: android.widget.ImageView
+    private lateinit var ivMove2Eff1: android.widget.ImageView
+    private lateinit var ivMove3Eff0: android.widget.ImageView
+    private lateinit var ivMove3Eff1: android.widget.ImageView
 
     private lateinit var btnFightBack: Button
 
@@ -345,6 +353,15 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         tvMove2Pp = findViewById(R.id.tvMove2Pp)
         tvMove3Name = findViewById(R.id.tvMove3Name)
         tvMove3Pp = findViewById(R.id.tvMove3Pp)
+
+        ivMove0Eff0 = findViewById(R.id.ivMove0Eff0)
+        ivMove0Eff1 = findViewById(R.id.ivMove0Eff1)
+        ivMove1Eff0 = findViewById(R.id.ivMove1Eff0)
+        ivMove1Eff1 = findViewById(R.id.ivMove1Eff1)
+        ivMove2Eff0 = findViewById(R.id.ivMove2Eff0)
+        ivMove2Eff1 = findViewById(R.id.ivMove2Eff1)
+        ivMove3Eff0 = findViewById(R.id.ivMove3Eff0)
+        ivMove3Eff1 = findViewById(R.id.ivMove3Eff1)
 
         btnFightBack = findViewById(R.id.btnFightBack)
 
@@ -782,11 +799,25 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
         }
     }
 
+    private fun getEffectivenessDrawable(multiplier: Double): Int? {
+        return when {
+            multiplier == 0.0 -> R.drawable.eff_0x
+            multiplier == 0.25 -> R.drawable.ineff_4x
+            multiplier == 0.5 -> R.drawable.ineff_2x
+            multiplier == 1.0 -> R.drawable.eff_1x
+            multiplier == 2.0 -> R.drawable.eff_2x
+            multiplier == 4.0 -> R.drawable.eff_4x
+            else -> null
+        }
+    }
+
     private fun updateFightMenu(data: JSONObject?) {
         val moves = data?.optJSONArray("moves")
         val buttons = listOf(btnMove0, btnMove1, btnMove2, btnMove3)
         val nameViews = listOf(tvMove0Name, tvMove1Name, tvMove2Name, tvMove3Name)
         val ppViews = listOf(tvMove0Pp, tvMove1Pp, tvMove2Pp, tvMove3Pp)
+        val eff0Views = listOf(ivMove0Eff0, ivMove1Eff0, ivMove2Eff0, ivMove3Eff0)
+        val eff1Views = listOf(ivMove0Eff1, ivMove1Eff1, ivMove2Eff1, ivMove3Eff1)
 
         for (i in buttons.indices) {
             val btn = buttons[i]
@@ -799,9 +830,34 @@ class ConsolePresentation(private val outerContext: Context, display: Display) :
                 val pp = moveObj.optInt("pp", 0)
                 val maxPp = moveObj.optInt("maxPp", 0)
                 val type = moveObj.optInt("type", 0)
+                val multipliers = moveObj.optJSONArray("multipliers")
 
                 tvName.text = name
                 tvPp.text = "PP: $pp/$maxPp"
+
+                val eff0View = eff0Views[i]
+                val eff1View = eff1Views[i]
+
+                eff0View.visibility = View.GONE
+                eff1View.visibility = View.GONE
+
+                if (multipliers != null && multipliers.length() > 0) {
+                    val m0 = multipliers.optDouble(0, 1.0)
+                    val d0 = getEffectivenessDrawable(m0)
+                    if (d0 != null) {
+                        eff0View.setImageResource(d0)
+                        eff0View.visibility = View.VISIBLE
+                    }
+
+                    if (multipliers.length() > 1) {
+                        val m1 = multipliers.optDouble(1, 1.0)
+                        val d1 = getEffectivenessDrawable(m1)
+                        if (d1 != null) {
+                            eff1View.setImageResource(d1)
+                            eff1View.visibility = View.VISIBLE
+                        }
+                    }
+                }
 
                 btn.visibility = View.VISIBLE
 
