@@ -108,7 +108,7 @@
                             android:id="@+id/tvMove0Name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="#33FF33"
+                            android:textColor="#FFFFFF"
                             android:textSize="26sp"
                             android:textStyle="bold"
                             android:text="-" />
@@ -124,7 +124,7 @@
                                 android:id="@+id/tvMove0Pp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="#33FF33"
+                                android:textColor="#FFFFFF"
                                 android:textSize="24sp"
                                 android:text="PP: 0/0" />
 
@@ -174,7 +174,7 @@
                             android:id="@+id/tvMove1Name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="#33FF33"
+                            android:textColor="#FFFFFF"
                             android:textSize="26sp"
                             android:textStyle="bold"
                             android:text="-" />
@@ -190,7 +190,7 @@
                                 android:id="@+id/tvMove1Pp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="#33FF33"
+                                android:textColor="#FFFFFF"
                                 android:textSize="24sp"
                                 android:text="PP: 0/0" />
 
@@ -241,7 +241,7 @@
                             android:id="@+id/tvMove2Name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="#33FF33"
+                            android:textColor="#FFFFFF"
                             android:textSize="26sp"
                             android:textStyle="bold"
                             android:text="-" />
@@ -257,7 +257,7 @@
                                 android:id="@+id/tvMove2Pp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="#33FF33"
+                                android:textColor="#FFFFFF"
                                 android:textSize="24sp"
                                 android:text="PP: 0/0" />
 
@@ -308,7 +308,7 @@
                             android:id="@+id/tvMove3Name"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="#33FF33"
+                            android:textColor="#FFFFFF"
                             android:textSize="26sp"
                             android:textStyle="bold"
                             android:text="-" />
@@ -324,7 +324,7 @@
                                 android:id="@+id/tvMove3Pp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="#33FF33"
+                                android:textColor="#FFFFFF"
                                 android:textSize="24sp"
                                 android:text="PP: 0/0" />
 
@@ -396,7 +396,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Targeting:"
-                android:textColor="#33FF33"
+                android:textColor="#FFFFFF"
                 android:textSize="24sp"
                 android:fontFamily="monospace"
                 android:gravity="center"
@@ -422,7 +422,7 @@
                 android:layout_marginTop="16dp"
                 android:background="@drawable/retro_button_border"
                 android:text="BACK"
-                android:textColor="#33FF33"
+                android:textColor="#FFFFFF"
                 android:textSize="24sp"
                 android:backgroundTint="@null" />
         </LinearLayout>
